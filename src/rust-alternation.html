@@ -1,0 +1,96 @@
+<!--meta
+{"id":"rust-alternation","title":"향나무와 사과나무를 오가는 곰팡이 (붉은별무늬병 이종기생)","subject":"나무의사","unit":"수목병리학 · 녹병","summary":"달을 돌려 향나무↔사과·배나무 사이의 포자 이동을 보고, 거리·비·방제를 바꾸며 발병률을 예측하는 실험","added":"2026-11-19","headline":"이 곰팡이는 집이 두 채다","sub":"봄엔 사과나무, 겨울엔 향나무 — 이종기생 녹병"}
+-->
+<!--@intro-->
+<p class="lead">사과·배 잎에 주황색 동그란 점이 생기는 <b>붉은별무늬병</b>은 이상한 곰팡이가 일으켜요. 이 녹병균은 한 나무에서는 한 해를 다 못 살아요. 봄~여름은 <b>사과·배나무</b>에서, 가을~겨울은 <b>향나무</b>에서 지내며 두 나무를 오가야만 생활사가 완성돼요(<b>이종기생</b>). 그래서 근처 향나무를 없애면 병도 없어져요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div>
+    <div class="row"><label>달 <b id="vM"></b></label><input type="range" id="m" min="1" max="12" value="4"></div>
+    <div class="controls"><button id="play" class="primary">▶ 1년 재생</button></div>
+    <h3>올봄 발병 예측</h3>
+    <div class="row"><label>향나무까지 거리 <b id="vD"></b></label><input type="range" id="d" min="0" max="300" value="20"><div class="hint">100m 안이면 거의 다 걸리고, 2km 넘으면 거의 안 걸린다는 국내 연구가 있어요.</div></div>
+    <div class="row"><label>4~5월 3시간 넘게 오는 비 <b id="vR"></b></label><input type="range" id="rain" min="0" max="8" value="4"></div>
+    <label class="check"><input type="checkbox" id="cut"><div><b class="hl">주변 향나무 제거</b><div class="d">중간기주를 없애 생활사를 끊어요</div></div></label>
+    <label class="check"><input type="checkbox" id="fung"><div><b class="hb">사과나무 살균제 (비 오기 전, 4~5월)</b><div class="d">담자포자가 날아올 때 잎을 보호</div></div></label>
+    <div class="big" id="pct"></div>
+  </div>
+</div>
+<!--@js-->
+let timer=null, spores=[];
+const st=makeCanvas('cv',0.95,draw);
+const MS={1:['향나무','겨울포자(동포자) 상태로 월동'],2:['향나무','겨울포자 월동'],3:['향나무','겨울포자퇴가 자라는 중'],4:['향나무→사과','비 오면 겨울포자퇴가 주황 젤리처럼 부풀고 담자포자가 날아감'],5:['향나무→사과','담자포자가 사과·배 잎에 감염 (잠복 약 9~10일)'],6:['사과','잎 앞면에 주황 점: 녹병정자기'],7:['사과→향나무','잎 뒷면에 털 같은 녹포자기 → 녹포자가 향나무로'],8:['사과→향나무','녹포자가 향나무로 날아감'],9:['향나무','향나무에 정착, 균사로 잠복'],10:['향나무','향나무에서 자람'],11:['향나무','겨울포자퇴 준비'],12:['향나무','월동']};
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H); const m=val('m');
+  const jx=W*0.2, ax=W*0.78, gy=H*0.78;
+  // 향나무
+  const cut=val('cut');
+  if(!cut){ ctx.beginPath(); ctx.moveTo(jx,gy-H*0.5); ctx.lineTo(jx-W*0.12,gy-H*0.06); ctx.lineTo(jx+W*0.12,gy-H*0.06); ctx.closePath(); ctx.fillStyle='rgba(90,150,110,.6)'; ctx.fill(); ctx.strokeStyle=CH.chalk; ctx.lineWidth=2; ctx.stroke();
+    line(ctx,jx,gy-H*0.06,jx,gy,CH.brown,5);
+    if(m>=3&&m<=5){ for(let i=0;i<6;i++){ const x=jx+(i-2.5)*W*0.03, y=gy-H*0.18-(i%3)*H*0.08; const sw=m===3?4:9; ctx.beginPath(); ctx.ellipse(x,y,sw,sw*0.8,0,0,Math.PI*2); ctx.fillStyle=CH.orange; ctx.fill(); } }
+  } else txt(ctx,'(향나무 제거됨)',jx,gy-H*0.2,18,CH.dim,'center',W);
+  txt(ctx,'향나무',jx,gy+20,20,CH.chalk,'center',W); txt(ctx,'(중간기주: 겨울포자)',jx,gy+38,14,CH.dim,'center',W);
+  // 사과나무
+  circle(ctx,ax,gy-H*0.36,W*0.15,'rgba(168,224,160,.35)',CH.chalk,2); line(ctx,ax,gy-H*0.2,ax,gy,CH.brown,6);
+  const infected = (!cut) && m>=5 && m<=9;
+  if(infected){ const n=Math.round(prediction()*0.3); for(let i=0;i<n;i++){ const a=i*2.4, r=W*0.11*((i*37%10)/10); circle(ctx,ax+Math.cos(a)*r,gy-H*0.36+Math.sin(a)*r,4,CH.orange,CH.red,1.5); } }
+  if(m>=10||m<=3){ txt(ctx,'잎 없음',ax,gy-H*0.36,16,CH.dim,'center',W); }
+  txt(ctx,'사과·배나무',ax,gy+20,20,CH.chalk,'center',W); txt(ctx,'(기주: 녹병정자·녹포자)',ax,gy+38,14,CH.dim,'center',W);
+  spores.forEach(s=> circle(ctx,s.x*W,s.y*H,3,s.c));
+  const [where,what]=MS[m]; txt(ctx,m+'월 · '+where,W/2,24,22,CH.yellow,'center',W);
+  // 포자 경로 화살표
+  if(!cut && (m===4||m===5)) arrow(ctx,jx+W*0.1,H*0.22,ax-W*0.12,H*0.22,CH.orange,2.5);
+  if(!cut && (m===7||m===8)) arrow(ctx,ax-W*0.12,H*0.27,jx+W*0.1,H*0.27,CH.yellow,2.5);
+  if(!cut && (m===4||m===5)) txt(ctx,'담자포자',W/2,H*0.2,16,CH.orange,'center',W);
+  if(!cut && (m===7||m===8)) txt(ctx,'녹포자',W/2,H*0.32,16,CH.yellow,'center',W);
+}
+function prediction(){
+  if(val('cut')) return 0;
+  const dkm=val('d')/100; const df = dkm<=0.1?1: Math.pow(clamp(1-(dkm-0.1)/1.9,0,1),1.5);
+  const rf = clamp(val('rain')/5,0,1);
+  return Math.round(100*df*rf*(val('fung')?0.15:1));
+}
+function tick(){
+  const m=val('m'), cut=val('cut');
+  if(!cut && (m===4||m===5) && Math.random()<0.5) spores.push({x:0.25,y:0.3+Math.random()*0.2,vx:0.006,c:CH.orange});
+  if(!cut && (m===7||m===8) && Math.random()<0.4) spores.push({x:0.72,y:0.3+Math.random()*0.2,vx:-0.006,c:CH.yellow});
+  spores.forEach(s=>{ s.x+=s.vx; s.y+=(Math.random()-0.5)*0.004; }); spores=spores.filter(s=>s.x>0.15&&s.x<0.8);
+  draw(); requestAnimationFrame(tick);
+}
+function update(){
+  const m=val('m'); setText('vM',m+'월'); const d=val('d')*10; setText('vD', d<1000? d+' m' : (d/1000).toFixed(1)+' km'); setText('vR',val('rain')+'번');
+  const p=prediction(); setText('pct','예상 발병: '+p+'%');
+  msg(MS[m][1], m>=4&&m<=5? '#f0a868' : '#a8e0a0');
+  draw();
+}
+$('play').onclick=()=>{ if(timer){clearInterval(timer);timer=null;return;} $('m').value=1; update(); timer=setInterval(()=>{ const v=val('m'); if(v>=12){clearInterval(timer);timer=null;return;} $('m').value=v+1; update(); },1300); };
+onInputs(['m','d','rain','cut','fung'],update);
+requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li>병원균: <span class="hl">Gymnosporangium</span>속 녹병균. 사과 붉은별무늬병 <i>G. yamadae</i>, 배 붉은별무늬병 <i>G. asiaticum</i>(= <i>G. haraeanum</i>).</li>
+  <li><span class="hl">이종기생</span>: 생활사를 완성하려면 두 종류의 기주가 필요해요. 경제적으로 중요한 사과·배를 <b>기주</b>, 향나무류를 <b>중간기주</b>라고 불러요.</li>
+  <li>포자 순서: 향나무의 <b>겨울포자(동포자)</b> → 비 맞으면 발아해 <b>담자포자</b> → 사과·배 잎 감염 → 잎 앞면 <b>녹병정자</b> → 잎 뒷면 <b>녹포자</b> → 녹포자가 향나무로 → 월동.</li>
+  <li>이 병에는 <span class="hp">여름포자(하포자) 세대가 없어요</span>. 그래서 사과나무끼리는 다시 옮지 않고(2차 전염 없음), 봄에 한 번 감염되는 게 전부예요.</li>
+  <li>감염 조건: 4월 중순~5월 중순, <b>3시간 이상 계속 오는 비</b>. 향나무와 100m 안이면 거의 다 걸리고, 2km 넘으면 거의 안 걸린다는 국내 연구가 있어요.</li>
+  <li>방제: <span class="hl">과수원 주변 향나무 제거</span>(가장 확실), 향나무에 4월 약제 살포, 사과·배에는 <b>비 오기 전</b> 예방 살균제(4~5월).</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>포자</th><th>어디서</th><th>시기</th></tr>
+<tr><td>겨울포자</td><td>향나무</td><td>겨울~봄</td></tr>
+<tr><td class="ho">담자포자</td><td>향나무 → 사과·배</td><td>4~5월 비 올 때</td></tr>
+<tr><td>녹병정자</td><td>사과·배 잎 앞면</td><td>5~6월</td></tr>
+<tr><td class="hl">녹포자</td><td>사과·배 잎 뒷면 → 향나무</td><td>6~8월</td></tr>
+<tr><td class="hp">여름포자</td><td colspan="2">없음 (2차 전염 없음)</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"붉은별무늬병의 중간기주는?","o":["소나무","향나무","잣나무","까치밥나무"],"a":1,"e":"향나무류가 중간기주예요. 까치밥나무는 잣나무 털녹병의 중간기주예요."},
+{"q":"향나무에서 사과·배 잎으로 날아가 감염시키는 포자는?","o":["녹포자","여름포자","담자포자","녹병정자"],"a":2,"e":"향나무의 겨울포자가 비를 맞아 발아하면 담자포자가 만들어져 사과·배로 날아가요."},
+{"q":"붉은별무늬병에 없는 포자 세대는?","o":["겨울포자","담자포자","녹포자","여름포자"],"a":3,"e":"여름포자 세대가 없어서 사과나무끼리 2차 전염이 일어나지 않아요."},
+{"q":"붉은별무늬병 방제로 가장 근본적인 방법은?","o":["여름철 살충제 살포","과수원 주변 향나무 제거","겨울철 사과나무 전정","질소 비료 증량"],"a":1,"e":"중간기주인 향나무를 없애면 생활사가 끊겨요. 약제는 4~5월 비 오기 전 예방 살포가 효과적이에요."}
+]

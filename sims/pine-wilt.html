@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>하늘소가 태워 나르는 소나무 에이즈 (소나무재선충병) · 칠판 시뮬레이션</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--board:#24372d;--board2:#1d2e25;--frame:#6b4a2f;--chalk:#f1efe6;--dim:rgba(241,239,230,.6);
+    --yellow:#f4d35e;--pink:#f29e9e;--blue:#9ed2f2;--green:#a8e0a0;--orange:#f0a868}
+  *{box-sizing:border-box}
+  body{margin:0;background:#2b2118;color:var(--chalk);font-family:"Noto Sans KR",sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:14px}
+  .back{display:inline-block;margin:0 0 10px;color:var(--yellow);text-decoration:none;font-size:.95rem}
+  .board{background:radial-gradient(ellipse at 30% 20%,#2c4436 0%,var(--board) 45%,var(--board2) 100%);
+    border:14px solid var(--frame);border-radius:10px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.5);
+    padding:18px 18px 22px;margin-bottom:18px}
+  h1,h2,h3{font-family:"Nanum Pen Script",cursive;font-weight:400;letter-spacing:.5px}
+  h1{font-size:2.5rem;margin:0 0 6px;line-height:1.15}
+  h1 small{display:block;font-size:1.45rem;color:var(--yellow)}
+  h2{font-size:2rem;margin:4px 0 8px;color:var(--yellow)}
+  h3{font-size:1.5rem;margin:4px 0;color:var(--yellow)}
+  p{margin:6px 0}
+  .lead{color:var(--dim);font-size:.95rem}
+  .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .canvasBox{background:rgba(0,0,0,.12);border:1px dashed rgba(241,239,230,.25);border-radius:8px;padding:6px}
+  canvas{display:block;width:100%;touch-action:manipulation}
+  .msg{font-family:"Nanum Pen Script",cursive;font-size:1.55rem;min-height:2.1rem;color:var(--green);text-align:center;line-height:1.25;margin:6px 0}
+  .stat{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:.9rem;color:var(--dim)}
+  .stat b{color:var(--chalk)}
+  button,.tab{font-family:"Noto Sans KR",sans-serif;font-size:.92rem;background:transparent;color:var(--chalk);
+    border:1.5px solid rgba(241,239,230,.6);border-radius:6px;padding:7px 12px;cursor:pointer}
+  button:hover{background:rgba(241,239,230,.1)}
+  button.on,.tab.on{background:var(--chalk);color:var(--board2);font-weight:700}
+  button.primary{border-color:var(--yellow);color:var(--yellow)}
+  .controls,.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .row{margin:10px 0}
+  .row label{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}
+  .row label b{color:var(--yellow);white-space:nowrap}
+  .row input[type=range]{width:100%;accent-color:var(--yellow)}
+  .row .hint{font-size:.8rem;color:var(--dim)}
+  .num{width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid rgba(241,239,230,.4);background:rgba(0,0,0,.2);color:var(--chalk);font-size:1rem}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:8px;border:1px solid rgba(241,239,230,.18);margin:6px 0;cursor:pointer}
+  .check input{margin-top:5px;width:18px;height:18px;accent-color:var(--yellow)}
+  .check .d{font-size:.84rem;color:var(--dim)}
+  .big{font-family:"Nanum Pen Script",cursive;font-size:2.4rem;color:var(--yellow);line-height:1.1}
+  .note{border-left:3px solid var(--yellow);padding:4px 10px;margin:10px 0;font-size:.92rem}
+  .teacher li{margin:6px 0}
+  .hl{color:var(--yellow)} .hp{color:var(--pink)} .hb{color:var(--blue)} .hg{color:var(--green)} .ho{color:var(--orange)}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;margin-top:8px}
+  td,th{border-bottom:1px dashed rgba(241,239,230,.25);padding:6px 4px;text-align:left;vertical-align:top}
+  th{font-family:"Nanum Pen Script",cursive;font-size:1.3rem;font-weight:400;color:var(--yellow)}
+  .tblwrap{overflow-x:auto}
+  .q{border:1px solid rgba(241,239,230,.2);border-radius:8px;padding:10px 12px;margin:10px 0}
+  .q .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .q .opts button.right{background:rgba(168,224,160,.25);border-color:var(--green)}
+  .q .opts button.wrong{background:rgba(242,158,158,.2);border-color:var(--pink)}
+  .q .exp{display:none;font-size:.9rem;margin-top:8px;color:var(--dim)}
+  .q.done .exp{display:block}
+  .foot{font-size:.8rem;color:var(--dim);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← 시뮬레이션 목록</a>
+  <div class="board">
+    <h1>재선충은 혼자 못 걷는다. 하늘소 택시를 탄다<small>매개충 생활사를 끊는 게 방제의 전부 — 소나무재선충병</small></h1>
+    <p class="lead">소나무재선충은 1mm 정도의 실 같은 선충이에요. 스스로는 나무를 옮겨 다니지 못해서 <b>솔수염하늘소·북방수염하늘소</b>의 몸(숨구멍)에 올라타요. 하늘소가 건강한 소나무의 어린 가지를 갉아 먹는 순간(후식), 상처로 재선충이 들어가 물관을 망가뜨려요. 재선충은 20일 만에 20만 마리 이상으로 불어나고, 감염된 소나무는 잎이 붉게 변해 2~3개월 안에 죽어요. 치료 방법이 없어 <b>걸리면 100% 고사</b>해요.</p>
+<p class="lead">그리고 죽은 나무가 다음 해 하늘소의 집이 돼요. 이 고리를 끊는 게 방제예요.</p>
+  </div>
+  <div class="board">
+    <div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span><b id="sY">1</b>년차 <b id="sM">1</b>월</span><span>건강: <b id="sH"></b></span><span>감염·고사: <b id="sD"></b></span></div>
+  </div>
+  <div>
+    <h3>방제 조합 고르기</h3>
+    <label class="check"><input type="checkbox" id="remove"><div><b class="hl">고사목 벌채·파쇄(훈증)</b><div class="d">우화 전(가을~이듬해 봄)에 죽은 나무를 없애 하늘소 유충을 같이 제거. 현실처럼 다 찾지는 못해요(약 65%)</div></div></label>
+    <label class="check"><input type="checkbox" id="inject"><div><b class="hg">예방 나무주사</b><div class="d">건강한 나무에 약제를 주입해 재선충이 들어와도 못 불어나게 (일부 나무에만)</div></div></label>
+    <label class="check"><input type="checkbox" id="spray"><div><b class="hb">매개충 우화기 약제 살포</b><div class="d">봄~여름 하늘소가 나올 때 밀도를 낮춤</div></div></label>
+    <div class="row"><label>재생 속도 <b id="vS"></b></label><input type="range" id="spd" min="1" max="5" value="3"></div>
+    <div class="controls"><button id="play" class="primary">▶ 재생</button><button id="reset">↺ 새 숲</button></div>
+  </div>
+</div>
+  </div>
+  <div class="board teacher">
+    <h2>선생님 한마디 — 시험에 나오는 것만</h2>
+    <ol>
+  <li>병원체: <span class="hl">소나무재선충</span>(선충, 약 1mm). 매개충: <span class="hl">솔수염하늘소</span>(주로 소나무·곰솔), <span class="hl">북방수염하늘소</span>(소나무·잣나무).</li>
+  <li>생활사: 고사목 속 유충 월동 → 봄에 번데기, 재선충이 번데기 주변으로 모여듦 → <b>성충 우화 때 기문(숨구멍)에 재선충 탑승</b> → 건강한 소나무 어린 가지 <b>후식</b> → 상처로 재선충 침입·증식 → 물 이동 차단 → 고사 → 쇠약·고사목에 매개충 산란 → 반복.</li>
+  <li>증상: 잎이 시들며 아래로 처지고 <b>송진이 거의 나오지 않음</b> → 수관 전체가 붉게 변하며 2~3개월 안에 고사. 감염되면 100% 죽어요.</li>
+  <li>방제: <span class="hl">고사목 벌채 후 파쇄 또는 훈증</span>(매개충 우화 전까지), <span class="hg">예방 나무주사</span>(우화 전, 건강목 대상), <span class="hb">매개충 우화기 약제 살포</span>, 감염목·소나무류 <b>이동 금지</b>(소나무재선충병 방제특별법).</li>
+  <li>최근 방제는 훈증보다 <b>수집·파쇄</b> 비중이 크게 늘었어요. 기후변화로 매개충 우화가 빨라지고 활동 기간이 길어져 피해가 다시 늘고 있어요.</li>
+  <li>우리나라 첫 발견: 1988년 부산 금정산.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>시기</th><th>매개충</th><th>방제</th></tr>
+<tr><td>가을~이듬해 봄</td><td>고사목 속 유충</td><td class="hl">고사목 제거(파쇄·훈증)</td></tr>
+<tr><td>겨울~이른 봄</td><td>번데기 전</td><td class="hg">예방 나무주사</td></tr>
+<tr><td>봄~여름</td><td>성충 우화·후식</td><td class="hb">약제 살포</td></tr>
+<tr><td>가을</td><td>고사목에 산란</td><td>감염목 조사·표시</td></tr>
+</table></div>
+  </div>
+  <div class="board">
+    <h2>쪽지시험 4문제</h2>
+    <div id="quiz"></div>
+    <p class="foot">시뮬레이션은 이해를 돕기 위한 단순 모델이에요. 실제 수치는 수종·환경·조건에 따라 달라요.</p>
+  </div>
+</div>
+<script>
+/* ---------- 공통 도우미 ---------- */
+const CH={chalk:'#f1efe6',dim:'rgba(241,239,230,.55)',faint:'rgba(241,239,230,.16)',yellow:'#f4d35e',pink:'#f29e9e',
+  blue:'#9ed2f2',green:'#a8e0a0',orange:'#f0a868',brown:'#b0773f',red:'#e2675c',purple:'#c9a0f0'};
+const $=id=>document.getElementById(id);
+function makeCanvas(id, ratio, draw){
+  const cv=$(id), ctx=cv.getContext('2d'); const st={cv,ctx,W:0,H:0,draw};
+  function rs(){ const d=window.devicePixelRatio||1; const w=Math.max(200,cv.parentElement.clientWidth-12);
+    st.W=w; st.H=Math.round(w*(typeof ratio==='function'?ratio():ratio));
+    cv.width=st.W*d; cv.height=st.H*d; cv.style.height=st.H+'px'; ctx.setTransform(d,0,0,d,0,0); if(st.ready&&st.draw) st.draw(); }
+  window.addEventListener('resize',rs); st.resize=rs; rs(); setTimeout(()=>{ st.ready=true; st.draw&&st.draw(); },0);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(rs);
+  return st;
+}
+function txt(ctx,t,x,y,size,color,align,W){
+  if(W) size=Math.min(size, W/15);
+  ctx.font=size+'px "Nanum Pen Script","Noto Sans KR",cursive'; ctx.fillStyle=color||CH.chalk; ctx.textAlign=align||'center'; ctx.fillText(t,x,y);
+}
+function line(ctx,x1,y1,x2,y2,color,w,dash){ ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle=color||CH.chalk; ctx.lineWidth=w||2; ctx.stroke(); ctx.setLineDash([]); }
+function circle(ctx,x,y,r,fill,stroke,w){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=w||2;ctx.stroke();} }
+function rect(ctx,x,y,w,h,fill,stroke,lw){ if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||2;ctx.strokeRect(x,y,w,h);} }
+function arrow(ctx,x1,y1,x2,y2,color,w){ line(ctx,x1,y1,x2,y2,color,w); const a=Math.atan2(y2-y1,x2-x1),s=7+(w||2)*1.5;
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a-0.45),y2-s*Math.sin(a-0.45)); ctx.lineTo(x2-s*Math.cos(a+0.45),y2-s*Math.sin(a+0.45)); ctx.closePath(); ctx.fillStyle=color||CH.chalk; ctx.fill(); }
+function val(id){ const e=$(id); return e.type==='checkbox'? e.checked : +e.value; }
+function onInputs(ids,fn){ ids.forEach(i=>{ const e=$(i); e.addEventListener('input',fn); e.addEventListener('change',fn); }); fn(); }
+function setText(id,t){ const e=$(id); if(e) e.textContent=t; }
+function msg(t,color){ const e=$('msg'); if(e){ e.textContent=t; e.style.color=color||CH.green; } }
+function segButtons(containerId, onPick){ const c=$(containerId); const bs=[...c.querySelectorAll('button')];
+  bs.forEach(b=>b.addEventListener('click',()=>{ bs.forEach(x=>x.classList.remove('on')); b.classList.add('on'); onPick(b.dataset.v,b); })); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function renderQuiz(QS){ const box=$('quiz');
+  QS.forEach((it,k)=>{ const d=document.createElement('div'); d.className='q';
+    d.innerHTML=`<div><b>Q${k+1}.</b> ${it.q}</div><div class="opts"></div><div class="exp">💡 ${it.e}</div>`;
+    const opts=d.querySelector('.opts');
+    it.o.forEach((t,i)=>{ const b=document.createElement('button'); b.textContent=t; b.onclick=()=>{ if(d.classList.contains('done')) return;
+      d.classList.add('done'); b.classList.add(i===it.a?'right':'wrong'); opts.children[it.a].classList.add('right'); }; opts.appendChild(b); });
+    box.appendChild(d); });
+}
+</script>
+<script>
+const COLS=10, ROWS=7; let trees=[], month=1, year=1, timer=null, beetles=[];
+const st=makeCanvas('cv',1.05,draw);
+const STAGE={1:'유충 월동 (고사목 속)',2:'유충 월동 (고사목 속)',3:'유충 월동 (고사목 속)',4:'번데기 — 재선충이 모여듦',5:'성충 우화 시작 (재선충 탑승)',6:'후식으로 감염 ↑',7:'후식으로 감염 ↑',8:'우화 막바지, 쇠약목에 산란',9:'감염목 잎이 붉게 변함',10:'고사 → 유충이 목재 속으로',11:'유충 성장',12:'유충 월동 준비'};
+function reset(){ trees=[]; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) trees.push({r,c,s:'ok',inf:0,inj:false});
+  [[3,4],[3,5],[4,4],[1,1],[5,8]].forEach(([r,c])=>{ const t=trees[r*COLS+c]; t.s='dead'; t.larvae=true; });
+  month=1; year=1; beetles=[]; update(); }
+function neighbors(t,rad){ return trees.filter(o=>Math.abs(o.r-t.r)<=rad && Math.abs(o.c-t.c)<=rad && o!==t); }
+function stepMonth(){
+  month++; if(month>12){ month=1; year++; trees.forEach(t=>{ if(t.inj && Math.random()<0.15) t.inj=false; }); }
+  // 3~4월: 고사목 제거 (방제 기간 마감)
+  if(month===4 && val('remove')){ trees.forEach(t=>{ if(t.s==='dead' && Math.random()<0.65){ t.s='gone'; t.larvae=false; } }); }
+  // 예방주사: 매년 2월 일부 실시
+  if(month===2 && val('inject')){ trees.filter(t=>t.s==='ok').forEach(t=>{ if(Math.random()<0.35) t.inj=true; }); }
+  // 5~8월 우화·후식
+  if(month>=5 && month<=8){
+    const sources=trees.filter(t=>t.s==='dead' && t.larvae);
+    sources.forEach(src=>{ let n = 3 + Math.floor(Math.random()*3); if(val('spray')) n=Math.round(n*0.45);
+      for(let k=0;k<n;k++){ const cand=neighbors(src,2).filter(o=>o.s==='ok'); if(!cand.length) break; const tg=cand[Math.floor(Math.random()*cand.length)];
+        beetles.push({x:src.c,y:src.r,tx:tg.c,ty:tg.r,life:1});
+        if(Math.random()<0.45){ if(!tg.inj) { tg.s='inf'; tg.inf=0; } } } });
+    if(month===8) sources.forEach(s=>s.larvae=false); // 성충이 다 빠져나감
+  }
+  // 감염목 진행: 2~3개월 뒤 고사, 매개충이 산란
+  trees.forEach(t=>{ if(t.s==='inf'){ t.inf++; if(t.inf>=3){ t.s='dead'; t.larvae= true; } } });
+  // 오래된 고사목(유충 빠져나간 것)은 다음 해 더 이상 번식원이 아님
+  update();
+}
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const gx=W*0.06, gy=H*0.17, cw=(W*0.88)/COLS, ch=(H*0.68)/ROWS;
+  txt(ctx,STAGE[month],W/2,24,20,CH.yellow,'center',W);
+  // 월 표시 바
+  for(let m=1;m<=12;m++){ const x=gx+(m-1)*(W*0.88/12); rect(ctx,x+1,36,W*0.88/12-2,8, m===month?CH.yellow: (m>=5&&m<=8)?'rgba(242,158,158,.45)':'rgba(241,239,230,.15)'); }
+  txt(ctx,'우화기',gx+4.5*(W*0.88/12),58,14,CH.pink,'center',W);
+  trees.forEach(t=>{ const x=gx+t.c*cw+cw/2, y=gy+t.r*ch+ch*0.6;
+    if(t.s==='gone'){ txt(ctx,'·',x,y,20,CH.dim,'center'); return; }
+    const col = t.s==='ok'? (t.inj?'#7fd0c0':'#6fae5f') : t.s==='inf'? ['#9fae4f','#c9a040','#d2783c'][Math.min(2,t.inf)] : '#8a5a3a';
+    ctx.beginPath(); ctx.moveTo(x,y-ch*0.5); ctx.lineTo(x-cw*0.32,y+ch*0.15); ctx.lineTo(x+cw*0.32,y+ch*0.15); ctx.closePath(); ctx.fillStyle=col; ctx.fill();
+    line(ctx,x,y+ch*0.15,x,y+ch*0.32,CH.brown,3);
+    if(t.inj) txt(ctx,'+',x,y+2,14,'#1d2e25','center');
+    if(t.s==='dead' && t.larvae) txt(ctx,'🐛',x+cw*0.3,y+ch*0.3,12,CH.chalk,'center');
+  });
+  beetles.forEach(b=>{ const x=gx+lerp(b.x,b.tx,1-b.life)*cw+cw/2, y=gy+lerp(b.y,b.ty,1-b.life)*ch+ch*0.4; txt(ctx,'🪲',x,y,13,CH.chalk,'center'); });
+  txt(ctx,'초록=건강  청록+=주사  주황=감염  갈색=고사  🐛=하늘소 유충',W/2,H-8,14,CH.dim,'center',W);
+}
+function tick(){ beetles.forEach(b=>b.life-=0.04); beetles=beetles.filter(b=>b.life>0); draw(); requestAnimationFrame(tick); }
+function update(){
+  const ok=trees.filter(t=>t.s==='ok').length, bad=trees.filter(t=>t.s==='inf'||t.s==='dead').length, gone=trees.filter(t=>t.s==='gone').length;
+  setText('sY',year); setText('sM',month); setText('sH',ok+'그루'); setText('sD',bad+'그루 (제거 '+gone+')');
+  const sp=['느림','조금 느림','보통','빠름','아주 빠름'][val('spd')-1]; setText('vS',sp);
+  const nOn=['remove','inject','spray'].filter(i=>val(i)).length;
+  if(ok===0) msg('숲이 전멸했어요. 방제 없이 몇 년이면 이렇게 돼요','#f29e9e');
+  else if(year>=4 && bad===0) msg('고리를 끊었어요! 번식원(고사목)이 사라지니 확산이 멈춰요','#a8e0a0');
+  else if(month>=5&&month<=8) msg('하늘소가 날아다니며 건강한 소나무의 어린 가지를 갉아 먹는 중','#f29e9e');
+  else if(month===4 && val('remove')) msg('우화 전에 고사목을 제거했어요 → 유충도 함께 사라짐','#a8e0a0');
+  else msg(nOn? '방제 '+nOn+'가지를 조합 중. 몇 년 돌려 비교해 보세요' : '방제 없음. 재생해서 몇 년 뒤를 보세요','#f4d35e');
+}
+$('play').onclick=()=>{ if(timer){ clearInterval(timer); timer=null; $('play').textContent='▶ 재생'; return; } $('play').textContent='⏸ 멈춤'; timer=setInterval(stepMonth, 900/val('spd')); };
+$('spd').addEventListener('input',()=>{ update(); if(timer){ clearInterval(timer); timer=setInterval(stepMonth, 900/val('spd')); } });
+$('reset').onclick=()=>{ if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 재생';} reset(); };
+['remove','inject','spray'].forEach(i=>$(i).addEventListener('change',update));
+reset(); requestAnimationFrame(tick);
+</script>
+<script>
+renderQuiz([{"q": "소나무재선충이 건강한 소나무로 침입하는 주된 경로는?", "o": ["뿌리 접촉", "매개충 성충의 후식 상처", "바람에 날린 포자", "빗물"], "a": 1, "e": "매개충 성충이 어린 가지를 갉아 먹을 때(후식) 생긴 상처로 재선충이 들어가요."}, {"q": "소나무재선충병의 매개충이 아닌 것은?", "o": ["솔수염하늘소", "북방수염하늘소", "솔잎혹파리"], "a": 2, "e": "솔잎혹파리는 솔잎에 벌레혹을 만드는 별도의 해충이에요."}, {"q": "고사목을 벌채해 파쇄·훈증하는 가장 큰 이유는?", "o": ["목재를 팔기 위해", "나무 속 매개충 유충을 없애 다음 해 확산원을 끊기 위해", "재선충을 치료하기 위해", "산불 예방"], "a": 1, "e": "고사목은 매개충 유충의 월동처예요. 우화 전에 없애야 확산 고리가 끊겨요."}, {"q": "재선충병 감염목의 특징으로 옳은 것은?", "o": ["송진이 많이 흘러나온다", "잎이 시들고 송진이 거의 나오지 않는다", "겨울에만 증상이 나타난다", "잎에 붉은 별무늬가 생긴다"], "a": 1, "e": "감염되면 수지(송진) 분비가 멈추고 잎이 시들어 붉게 변해요."}]);
+</script>
+</body>
+</html>

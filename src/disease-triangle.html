@@ -1,0 +1,87 @@
+<!--meta
+{"id":"disease-triangle","title":"병은 세 박자가 맞아야 생긴다 (병삼각형)","subject":"나무의사","unit":"수목병리학 · 기초","summary":"기주 감수성·병원체·환경을 조절하고 방제 수단을 써 보며 병삼각형의 넓이와 발병 진행을 비교하는 실험","added":"2026-11-19","headline":"병원균만 있다고 병이 나지 않는다","sub":"약한 나무 + 센 병원체 + 맞는 날씨 = 병 (병삼각형)"}
+-->
+<!--@intro-->
+<p class="lead">불이 붙으려면 땔감, 불씨, 산소가 다 있어야 하죠. 나무 병도 똑같아요. 병에 잘 걸리는 <b>기주</b>(나무), 병을 일으킬 힘이 있는 <b>병원체</b>, 병원체가 활동하기 좋은 <b>환경</b>. 세 가지가 동시에 맞아야 병이 생겨요. 셋 중 하나만 0이어도 삼각형이 찌그러져 넓이가 0이 되죠. 방제란 결국 이 삼각형의 한 변을 줄이는 일이에요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>병 발생 위험: <b id="sR"></b></span><span>진행 <b id="sW">0</b>주</span><span>발병률: <b id="sD">0%</b></span></div>
+  </div>
+  <div>
+    <div class="row"><label><span class="hg">기주</span> 감수성 <b id="vH"></b></label><input type="range" id="h" min="0" max="100" value="80"><div class="hint">저항성 품종·건강한 나무일수록 낮아요.</div></div>
+    <div class="row"><label><span class="hp">병원체</span> 양·병원력 <b id="vP"></b></label><input type="range" id="p" min="0" max="100" value="70"><div class="hint">전염원(병든 잎·가지)이 많을수록 높아요.</div></div>
+    <div class="row"><label><span class="hb">환경</span> 적합성 <b id="vE"></b></label><input type="range" id="e" min="0" max="100" value="75"><div class="hint">대부분의 곰팡이병은 비·높은 습도·잎이 젖은 시간이 길수록 높아요.</div></div>
+    <h3>방제 수단</h3>
+    <div class="controls"><button id="res">🌱 저항성 품종</button><button id="san">🧹 병든 잎·가지 제거</button><button id="env">🌬 가지치기·통풍·배수</button><button id="fung">🧴 예방 살균제</button></div>
+    <div class="controls"><button id="go" class="primary">▶ 한 시즌 진행</button><button id="reset">↺ 처음부터</button></div>
+  </div>
+</div>
+<!--@js-->
+let week=0, dis=0.01, timer=null, fung=false, hist=[];
+const st=makeCanvas('cv',1.0,draw);
+function risk(){ return (val('h')/100)*(val('p')/100)*(val('e')/100)*(fung?0.3:1); }
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const cx=W*0.5, cy=H*0.38, R=W*0.3;
+  const ang=[-Math.PI/2, Math.PI/6, Math.PI*5/6];
+  const v=[val('h'),val('p'),val('e')].map(x=>x/100);
+  const full=ang.map(a=>[cx+Math.cos(a)*R,cy+Math.sin(a)*R]);
+  ctx.beginPath(); full.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.closePath(); ctx.strokeStyle=CH.faint; ctx.setLineDash([5,5]); ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
+  const pts=ang.map((a,i)=>[cx+Math.cos(a)*R*v[i],cy+Math.sin(a)*R*v[i]]);
+  ctx.beginPath(); pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.closePath();
+  const r=risk(); ctx.fillStyle=`rgba(242,158,158,${0.15+r*0.6})`; ctx.fill(); ctx.strokeStyle=CH.pink; ctx.lineWidth=2.5; ctx.stroke();
+  const names=[['기주',CH.green],['병원체',CH.pink],['환경',CH.blue]];
+  full.forEach(([x,y],i)=>{ const dy=i===0?-10:22; txt(ctx,names[i][0],x,y+dy,22,names[i][1],'center',W); });
+  txt(ctx,'병',cx,cy+R*0.12,28,CH.chalk,'center',W);
+  if(fung) txt(ctx,'살균제 보호막',cx,cy+R*0.12+26,16,CH.yellow,'center',W);
+  // 발병 곡선
+  const L=W*0.1,Rr=W*0.95,T=H*0.72,B=H*0.95;
+  line(ctx,L,B,Rr,B,CH.chalk,1.5); line(ctx,L,T,L,B,CH.chalk,1.5);
+  txt(ctx,'발병률',L+4,T-4,15,CH.dim,'left',W); txt(ctx,'주 →',Rr,B-4,15,CH.dim,'right',W);
+  ctx.beginPath(); hist.forEach((d,i)=>{ const x=L+(Rr-L)*i/20, y=B-(B-T)*d; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.strokeStyle=CH.orange; ctx.lineWidth=2.5; ctx.stroke();
+}
+function stepWeek(){ const r=risk(); dis = dis + 0.9*r*dis*(1-dis) ; week++; hist.push(dis); if(week>=20){ clearInterval(timer); timer=null; } update(); }
+function update(){
+  const r=risk(); setText('vH',val('h')+''); setText('vP',val('p')+''); setText('vE',val('e')+'');
+  setText('sR', r<0.05?'거의 없음':r<0.2?'낮음':r<0.4?'보통':'높음'); setText('sW',week); setText('sD',Math.round(dis*100)+'%');
+  const zero=[['h','기주'],['p','병원체'],['e','환경']].filter(([i])=>val(i)<5).map(x=>x[1]);
+  if(zero.length) msg(zero.join('·')+' 조건이 빠져 삼각형이 무너졌어요 → 병이 안 생겨요','#a8e0a0');
+  else if(week>=20) msg(dis>0.5?`한 시즌 뒤 발병률 ${Math.round(dis*100)}% — 세 변이 다 길었어요`:`발병률 ${Math.round(dis*100)}%로 막았어요. 한 변만 줄여도 효과가 커요`, dis>0.5?'#f29e9e':'#a8e0a0');
+  else if(r>0.4) msg('세 조건이 모두 맞아 삼각형이 커요. 병이 빠르게 퍼질 거예요','#f29e9e');
+  else msg('삼각형 넓이 = 병이 생길 가능성. 변을 하나씩 줄여 보세요','#f4d35e');
+  draw();
+}
+function startSeason(){ week=0; dis=0.01; hist=[dis]; if(timer) clearInterval(timer); timer=setInterval(stepWeek,150); }
+$('res').onclick=()=>{ $('h').value=Math.max(0,val('h')-50); update(); };
+$('san').onclick=()=>{ $('p').value=Math.max(0,val('p')-45); update(); };
+$('env').onclick=()=>{ $('e').value=Math.max(0,val('e')-35); update(); };
+$('fung').onclick=()=>{ fung=true; update(); };
+$('go').onclick=startSeason;
+$('reset').onclick=()=>{ if(timer){clearInterval(timer);timer=null;} $('h').value=80;$('p').value=70;$('e').value=75; fung=false; week=0; dis=0.01; hist=[]; update(); };
+onInputs(['h','p','e'],update);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">병삼각형</span>: <span class="hg">감수성 기주</span> + <span class="hp">병원력 있는 병원체</span> + <span class="hb">발병에 알맞은 환경</span>. 셋이 동시에 갖춰져야 병이 생겨요.</li>
+  <li>여기에 <b>시간</b>(세 요소가 겹치는 기간)을 더하면 <span class="hl">병사면체</span>예요. 사람(관리 활동)을 더해 설명하기도 해요.</li>
+  <li>방제는 변 하나를 줄이는 것: 기주 → 저항성 품종·수세 강화, 병원체 → 전염원 제거(병든 잎·가지·고사목), 환경 → 통풍·배수·가지치기, 그리고 약제로 감염 차단.</li>
+  <li>대부분의 곰팡이(진균)병은 <b>잎이 젖어 있는 시간</b>이 길수록, 비가 잦을수록 심해져요.</li>
+  <li>병원체 중 수목병을 가장 많이 일으키는 건 <span class="hl">진균(곰팡이)</span>이에요. 그 밖에 세균, 바이러스, 파이토플라스마, 선충, 기생식물(겨우살이) 등이 있어요.</li>
+  <li>비생물적 원인(가뭄, 동해, 염해, 답압, 대기오염)은 전염되지 않지만 기주를 약하게 만들어 병삼각형의 "기주" 변을 키워요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>요소</th><th>줄이는 방법</th></tr>
+<tr><td class="hg">기주</td><td>저항성 품종, 적지적수, 수세 회복(시비·관수)</td></tr>
+<tr><td class="hp">병원체</td><td>병든 부위 제거·소각, 중간기주 제거, 검역</td></tr>
+<tr><td class="hb">환경</td><td>가지치기로 통풍, 배수 개선, 밀식 피하기</td></tr>
+<tr><td class="hl">시간</td><td>감염 시기에 맞춘 예방 살포</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"병삼각형을 이루는 세 요소가 아닌 것은?","o":["기주","병원체","환경","매개충"],"a":3,"e":"병삼각형은 기주·병원체·환경이에요. 매개충은 일부 병에서 병원체를 옮기는 역할이에요."},
+{"q":"병삼각형에 '시간'을 더한 개념은?","o":["병사면체","병환","코흐의 원칙","병원력"],"a":0,"e":"세 요소가 겹치는 시간까지 고려한 것이 병사면체예요."},
+{"q":"통풍을 위해 가지를 솎아 주는 것은 병삼각형의 어느 변을 줄이는 방제인가?","o":["기주","병원체","환경","모두 아님"],"a":2,"e":"잎이 젖어 있는 시간과 습도를 줄여 환경 요소를 줄이는 방법이에요."},
+{"q":"수목에 병을 가장 많이 일으키는 병원체는?","o":["바이러스","세균","진균(곰팡이)","파이토플라스마"],"a":2,"e":"수목병의 대부분은 진균이 원인이에요."}
+]

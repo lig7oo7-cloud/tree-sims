@@ -1,0 +1,79 @@
+<!--meta
+{"id":"pest-predator","title":"살충제를 쳤더니 벌레가 더 늘었다? (천적과 리서전스, 요방제수준)","subject":"나무의사","unit":"수목해충학 · 종합적 방제(IPM)","summary":"해충과 천적 개체군을 키우며 비선택성·선택성 약제, 천적 방사를 비교하고 경제적 피해수준·요방제수준을 익히는 실험","added":"2026-11-19","headline":"해충의 적을 죽이면 해충이 웃는다","sub":"천적·리서전스·요방제수준 — 종합적 방제(IPM)"}
+-->
+<!--@intro-->
+<p class="lead">진딧물이나 응애가 늘면 그걸 먹는 무당벌레·포식성 응애도 따라 늘어요. 천적이 많아지면 해충이 줄고, 먹이가 줄면 천적도 줄어요. 이렇게 서로 밀고 당기며 오르내려요. 그런데 아무 벌레나 다 죽이는 약(비선택성 살충제)을 치면 어떻게 될까요? 해충은 빨리 다시 불어나는데 천적은 늦게 회복돼서, 오히려 해충이 전보다 더 많아지기도 해요. 이게 <b>리서전스(해충 재발생, 격발)</b>예요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>해충: <b id="sN"></b></span><span>천적: <b id="sP"></b></span><span>경과: <b id="sT">0</b>일</span></div>
+  </div>
+  <div>
+    <h3>개입하기</h3>
+    <div class="controls">
+      <button id="broad">☠ 비선택성 살충제</button>
+      <button id="sel">🎯 선택성 약제</button>
+      <button id="release">🐞 천적 방사</button>
+    </div>
+    <label class="check"><input type="checkbox" id="lines" checked><div><b class="hp">기준선 보기</b><div class="d">경제적 피해수준(EIL)과 요방제수준(ET)</div></div></label>
+    <div class="controls"><button id="pause">⏸ 멈춤</button><button id="reset">↺ 처음부터</button></div>
+    <div class="note">요방제수준(ET)에 닿으면 방제를 시작해야 피해수준(EIL)을 넘기 전에 막을 수 있어요.</div>
+  </div>
+</div>
+<!--@js-->
+const r=0.3, Kc=1000, a=0.004, b=0.08, m=0.1, EIL=600, ET=420;
+let N=60, P=6, t=0, hist=[], run=true, events=[];
+const st=makeCanvas('cv',0.8,draw);
+function step(){ const dN=r*N*(1-N/Kc)-a*N*P, dP=b*a*N*P-m*P; N=Math.max(0.5,N+dN*0.5); P=Math.max(0.05,P+dP*0.5); t+=0.5; hist.push([N,P]); if(hist.length>400) hist.shift(); }
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const L=W*0.1,R=W*0.97,T=H*0.06,B=H*0.88;
+  const X=i=>L+(R-L)*i/400, Yn=v=>B-(B-T)*Math.min(v,1100)/1100, Yp=v=>B-(B-T)*Math.min(v,110)/110;
+  line(ctx,L,B,R,B,CH.chalk,1.5); line(ctx,L,T,L,B,CH.chalk,1.5);
+  if(val('lines')){ line(ctx,L,Yn(EIL),R,Yn(EIL),CH.red,2,[6,4]); txt(ctx,'경제적 피해수준 (EIL)',R,Yn(EIL)-5,14,CH.red,'right',W);
+    line(ctx,L,Yn(ET),R,Yn(ET),CH.yellow,2,[3,4]); txt(ctx,'요방제수준 (ET)',R,Yn(ET)-5,14,CH.yellow,'right',W); }
+  ctx.beginPath(); hist.forEach(([n],i)=>{ i?ctx.lineTo(X(i),Yn(n)):ctx.moveTo(X(i),Yn(n)); }); ctx.strokeStyle=CH.green; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.beginPath(); hist.forEach(([,p],i)=>{ i?ctx.lineTo(X(i),Yp(p)):ctx.moveTo(X(i),Yp(p)); }); ctx.strokeStyle=CH.orange; ctx.lineWidth=2.5; ctx.stroke();
+  events.forEach(e=>{ const i=hist.length-1-(t-e.t)*2; if(i>0){ line(ctx,X(i),T,X(i),B,CH.dim,1,[2,3]); txt(ctx,e.l,X(i)+2,T+12,13,CH.chalk,'left'); } });
+  txt(ctx,'— 해충',L+6,B-8,15,CH.green,'left',W); txt(ctx,'— 천적',L+70,B-8,15,CH.orange,'left',W);
+}
+let maxAfter=0, lastBroad=null;
+function tick(){ if(run){ for(let k=0;k<2;k++) step(); if(lastBroad!==null && t-lastBroad<60) maxAfter=Math.max(maxAfter,N); update(); } draw(); }
+function update(){
+  setText('sN',Math.round(N)+'마리'); setText('sP',Math.round(P)+'마리'); setText('sT',Math.round(t));
+  if(lastBroad!==null && t-lastBroad<60 && N>EIL) msg('리서전스! 천적이 함께 죽어서 해충이 약 치기 전보다 더 많아졌어요','#f29e9e');
+  else if(N>EIL) msg('경제적 피해수준을 넘었어요. 이미 손해가 방제 비용보다 커요','#f29e9e');
+  else if(N>ET) msg('요방제수준 도달 → 지금이 방제를 시작할 때','#f4d35e');
+  else if(P>N*0.06) msg('천적이 해충을 누르고 있어요. 굳이 약을 칠 필요가 없어요','#a8e0a0');
+  else msg('해충과 천적이 서로 밀고 당기며 오르내려요','#a8e0a0');
+}
+$('broad').onclick=()=>{ N*=0.1; P*=0.04; lastBroad=t; maxAfter=0; events.push({t,l:'☠'}); };
+$('sel').onclick=()=>{ N*=0.25; P*=0.85; events.push({t,l:'🎯'}); };
+$('release').onclick=()=>{ P+=25; events.push({t,l:'🐞'}); };
+$('pause').onclick=()=>{ run=!run; $('pause').textContent=run?'⏸ 멈춤':'▶ 재생'; };
+$('reset').onclick=()=>{ N=60;P=6;t=0;hist=[];events=[];lastBroad=null; };
+$('lines').addEventListener('change',draw);
+setInterval(tick,60);
+<!--@teacher-->
+<ol>
+  <li><span class="hp">경제적 피해수준(EIL)</span>: 해충 피해액이 방제 비용과 같아지는 해충 밀도. 이 이상이면 손해예요.</li>
+  <li><span class="hl">요방제수준(ET, 경제적 피해 허용수준)</span>: 밀도가 EIL에 닿기 전에 방제를 시작해야 하는 밀도. <b>항상 EIL보다 낮아요</b>.</li>
+  <li><span class="hp">리서전스(해충 재발생)</span>: 비선택성 살충제로 천적까지 죽어, 약제 처리 뒤 해충이 처리 전보다 더 많아지는 현상. 비슷한 개념으로 <b>2차 해충 대발생</b>(원래 문제없던 해충이 천적을 잃고 대발생, 예: 응애)이 있어요.</li>
+  <li><span class="hg">종합적 해충 관리(IPM)</span>: 천적 보호·방사(생물적), 저항성 품종·위생(경종적), 트랩(물리적), 꼭 필요할 때만 선택성 약제(화학적)를 조합해 밀도를 EIL 아래로 유지하는 것. 박멸이 목표가 아니에요.</li>
+  <li>대표 천적: 무당벌레·풀잠자리(진딧물), 칠레이리응애·긴털이리응애(응애), 기생벌(나방 알·유충), 가시고치벌(하늘소).</li>
+  <li>같은 약을 계속 쓰면 <b>약제 저항성</b>이 생겨요 → 작용기작이 다른 약제를 번갈아 써요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>약제</th><th>해충</th><th>천적</th><th>결과</th></tr>
+<tr><td class="hp">비선택성</td><td>대부분 죽음</td><td>대부분 죽음</td><td>리서전스 위험</td></tr>
+<tr><td class="hg">선택성</td><td>많이 죽음</td><td>대부분 생존</td><td>천적이 남은 해충 억제</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"방제를 시작해야 하는 해충 밀도로, 경제적 피해수준보다 낮게 잡는 기준은?","o":["일반평형밀도","요방제수준","경제적 피해수준","환경수용력"],"a":1,"e":"요방제수준(ET)이에요. EIL에 닿기 전에 대응하기 위한 기준이라 EIL보다 낮아요."},
+{"q":"비선택성 살충제 살포 후 천적이 줄어 해충이 처리 전보다 더 많아지는 현상은?","o":["약제 저항성","리서전스(해충 재발생)","교차 저항성","휴면"],"a":1,"e":"리서전스예요. 천적의 회복이 해충보다 늦어서 생겨요."},
+{"q":"종합적 해충 관리(IPM)의 목표로 옳은 것은?","o":["해충을 완전히 박멸한다","해충 밀도를 경제적 피해수준 아래로 유지한다","살충제만 정기적으로 살포한다","천적을 모두 제거한다"],"a":1,"e":"IPM은 여러 방법을 조합해 해충 밀도를 경제적 피해수준 아래로 관리하는 것이 목표예요."},
+{"q":"응애의 천적으로 이용되는 것은?","o":["칠레이리응애","솔수염하늘소","복숭아혹진딧물","꽃매미"],"a":0,"e":"칠레이리응애 같은 포식성 응애가 점박이응애 등의 천적으로 쓰여요."}
+]
