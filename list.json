@@ -1,3 +1,10 @@
 [
-  {"id":"codit","file":"sims/codit.html","title":"나무는 상처를 가둔다 (CODIT)","subject":"나무의사","unit":"수목생리학 · 수목관리","summary":"벽 1~4를 켜고 끄며 썩음이 퍼지는 방향과 범위를 비교하는 칠판 실험","added":"2026-11-19"}
+  {"id": "codit", "file": "sims/codit.html", "title": "나무는 상처를 가둔다 (CODIT)", "subject": "나무의사", "unit": "수목생리학 · 수목관리", "summary": "벽 1~4를 켜고 끄며 썩음이 퍼지는 방향과 범위를 비교하는 칠판 실험", "added": "2026-11-19"},
+  {"id": "transpiration", "title": "물은 위에서 당겨 올린다 (증산과 물의 이동)", "subject": "나무의사", "unit": "수목생리학 · 물", "summary": "습도·토양수분·빛을 바꾸며 수분퍼텐셜 차이로 물이 올라가는 모습과 시듦·색전을 보는 실험", "added": "2026-11-19", "file": "sims/transpiration.html"},
+  {"id": "apical-dominance", "title": "끝눈은 동생 눈들의 대장 (정아우세와 옥신)", "subject": "나무의사", "unit": "수목생리학 · 호르몬", "summary": "끝눈 자르기, 옥신 바르기, 시토키닌 처리를 해 보며 정아우세와 가지치기 반응, 수형 차이를 보는 실험", "added": "2026-11-19", "file": "sims/apical-dominance.html"},
+  {"id": "autumn-color", "title": "단풍은 칠하는 게 아니라 벗겨지는 것 (단풍 색소와 떨켜)", "subject": "나무의사", "unit": "수목생리학 · 낙엽", "summary": "날짜와 날씨, 수종을 바꾸며 엽록소·카로티노이드·안토시아닌·탄닌의 변화와 떨켜 형성을 보는 실험", "added": "2026-11-19", "file": "sims/autumn-color.html"},
+  {"id": "light-curve", "title": "그늘에서 버티는 나무, 햇빛을 먹는 나무 (광보상점·광포화점)", "subject": "나무의사", "unit": "수목생리학 · 광합성", "summary": "빛 세기와 온도를 바꾸며 양수·음수의 광합성 곡선, 광보상점·광포화점을 비교하는 실험", "added": "2026-11-19", "file": "sims/light-curve.html"},
+  {"id": "phloem", "title": "당은 압력으로 배달된다 (체관 압력류설·환상박피)", "subject": "나무의사", "unit": "수목생리학 · 탄수화물 이동", "summary": "계절별 공급원·수용부를 바꾸고 환상박피를 해 보며 체관에서 설탕이 압력으로 흐르는 원리를 보는 실험", "added": "2026-11-19", "file": "sims/phloem.html"},
+  {"id": "stomata", "title": "잎의 입술, 기공은 왜 열리고 닫힐까 (기공 개폐)", "subject": "나무의사", "unit": "수목생리학 · 물·광합성", "summary": "빛·CO₂·가뭄(ABA)·고온을 켜고 끄며 K⁺ 이동과 팽압으로 기공이 열리고 닫히는 원리를 보는 실험", "added": "2026-11-19", "file": "sims/stomata.html"},
+  {"id": "tree-rings", "title": "나이테는 나무의 일기장 (춘재·추재·환공재·산공재)", "subject": "나무의사", "unit": "수목생리학 · 생장", "summary": "해마다 날씨를 골라 나이테를 키우며 춘재·추재, 위연륜, 환공재·산공재·침엽수 목재 구조를 비교하는 실험", "added": "2026-11-19", "file": "sims/tree-rings.html"}
 ]

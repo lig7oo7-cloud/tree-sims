@@ -1,0 +1,105 @@
+<!--meta
+{"id":"stomata","title":"잎의 입술, 기공은 왜 열리고 닫힐까 (기공 개폐)","subject":"나무의사","unit":"수목생리학 · 물·광합성","summary":"빛·CO₂·가뭄(ABA)·고온을 켜고 끄며 K⁺ 이동과 팽압으로 기공이 열리고 닫히는 원리를 보는 실험","added":"2026-11-19","headline":"기공은 물풍선 두 개가 만든 문","sub":"공변세포에 물이 차면 휘면서 열린다"}
+-->
+<!--@intro-->
+<p class="lead">잎 뒷면에는 아주 작은 입(기공)이 수없이 많아요. 기공은 콩팥 모양 세포 두 개(<b>공변세포</b>)가 마주 붙어 만든 문이에요. 공변세포는 기공 쪽 안쪽 벽이 두껍고 바깥쪽 벽이 얇은 길쭉한 물풍선이라고 생각하면 돼요. 물이 차서 빵빵해지면(팽압↑) 얇은 바깥쪽이 더 늘어나면서 활처럼 휘고, 그 사이 틈이 벌어져요.</p>
+<p class="lead">물을 끌어들이는 열쇠는 <b>칼륨 이온(K⁺)</b>이에요. K⁺가 공변세포 안으로 들어오면 세포 안이 "짜져서" 물이 따라 들어와요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>공변세포 K⁺: <b id="sK"></b></span><span>팽압: <b id="sP"></b></span><span>기공: <b id="sO"></b></span></div>
+  </div>
+  <div>
+    <h3>신호 켜고 끄기</h3>
+    <label class="check"><input type="checkbox" id="light" checked><div><b class="hl">빛 (특히 청색광)</b><div class="d">양성자 펌프가 켜져 K⁺가 들어와요 → 열림</div></div></label>
+    <label class="check"><input type="checkbox" id="co2"><div><b class="hb">잎 속 CO₂ 많음</b><div class="d">이미 CO₂가 충분하니 닫는 쪽으로</div></div></label>
+    <label class="check"><input type="checkbox" id="aba"><div><b class="hp">가뭄 → ABA(앱시스산)</b><div class="d">뿌리·잎에서 ABA가 늘면 K⁺가 빠져나가요 → 닫힘</div></div></label>
+    <label class="check"><input type="checkbox" id="hot"><div><b class="ho">고온·건조한 한낮</b><div class="d">물이 너무 빠지면 한낮에 잠시 닫아요 (한낮 기공 닫힘)</div></div></label>
+  </div>
+</div>
+<!--@js-->
+let target=0.8, open=0.2, ions=[];
+const st=makeCanvas('cv',0.9,draw);
+for(let i=0;i<40;i++) ions.push({x:Math.random(),y:Math.random(),inside:Math.random()<0.3});
+function calc(){
+  let o = val('light')?1:0.08;
+  if(val('co2')) o*=0.45;
+  if(val('hot')) o*=0.5;
+  if(val('aba')) o*=0.1;
+  target=o;
+}
+function guard(ctx,cx,cy,side,o,W,H){
+  // 콩팥 모양 공변세포: 바깥 곡선 + 안쪽 곡선
+  const h=H*0.30, gap=4+o*W*0.07, w=W*0.13+o*W*0.025;
+  const ix=cx+side*gap, ox=cx+side*(gap+w);
+  ctx.beginPath();
+  ctx.moveTo(cx+side*2,cy-h);
+  ctx.bezierCurveTo(ox+side*w*0.6,cy-h*0.9,ox+side*w*0.6,cy+h*0.9,cx+side*2,cy+h);
+  ctx.bezierCurveTo(ix+side*o*W*0.02,cy+h*0.5,ix+side*o*W*0.02,cy-h*0.5,cx+side*2,cy-h);
+  ctx.fillStyle='rgba(168,224,160,'+(0.25+0.35*o)+')'; ctx.fill();
+  ctx.strokeStyle=CH.chalk; ctx.lineWidth=2; ctx.stroke();
+  // 두꺼운 안쪽 벽
+  ctx.beginPath(); ctx.moveTo(cx+side*2,cy-h*0.95); ctx.bezierCurveTo(ix+side*o*W*0.02,cy-h*0.5,ix+side*o*W*0.02,cy+h*0.5,cx+side*2,cy+h*0.95);
+  ctx.strokeStyle=CH.yellow; ctx.lineWidth=5; ctx.stroke();
+  // 엽록체
+  for(let k=0;k<4;k++) circle(ctx,cx+side*(gap+w*0.55),cy-h*0.5+k*h*0.33,4,'rgba(120,200,120,.8)');
+  return {ix,ox,h};
+}
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H*0.5;
+  txt(ctx,'잎 뒷면을 현미경으로 본 기공',W/2,24,22,CH.chalk,'center',W);
+  // 기공 틈
+  ctx.beginPath(); ctx.ellipse(cx,cy,2+open*W*0.07,H*0.24*Math.max(0.2,open),0,0,Math.PI*2); ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fill();
+  const g1=guard(ctx,cx,cy,-1,open,W,H), g2=guard(ctx,cx,cy,1,open,W,H);
+  // K+ 이온
+  ions.forEach(p=>{ let x,y;
+    if(p.inside){ const side=p.x<0.5?-1:1; x=cx+side*(10+open*W*0.07+ (W*0.1)*((p.x*2)%1)); y=cy+(p.y-0.5)*H*0.45; }
+    else { const side=p.x<0.5?-1:1; x= side<0? W*0.04+p.x*W*0.2 : W*0.76+(p.x-0.5)*W*0.4; y=H*0.12+p.y*H*0.76; }
+    txt(ctx,'K⁺',x,y,14,CH.yellow,'center'); });
+  if(open>0.4){ arrow(ctx,W*0.2,H*0.88,W*0.33,H*0.78,CH.blue,2); arrow(ctx,W*0.8,H*0.88,W*0.67,H*0.78,CH.blue,2); txt(ctx,'물 들어옴',W/2,H-10,18,CH.blue,'center',W);}
+  else if(target<open-0.02){ arrow(ctx,W*0.33,H*0.78,W*0.2,H*0.88,CH.pink,2); arrow(ctx,W*0.67,H*0.78,W*0.8,H*0.88,CH.pink,2); txt(ctx,'물 빠져나감',W/2,H-10,18,CH.pink,'center',W);}
+}
+function tick(){
+  open += (target-open)*0.03;
+  const want=Math.round(target*ions.length*0.85);
+  const now=ions.filter(p=>p.inside).length;
+  if(now<want){ const p=ions.find(p=>!p.inside); if(p&&Math.random()<0.3){p.inside=true;p.x=Math.random();p.y=Math.random();} }
+  if(now>want){ const p=ions.find(p=>p.inside); if(p&&Math.random()<0.3){p.inside=false;p.x=Math.random();p.y=Math.random();} }
+  setText('sK', ions.filter(p=>p.inside).length+'개'); setText('sP', open>0.6?'높음':open>0.3?'중간':'낮음'); setText('sO', open>0.6?'활짝 열림':open>0.25?'반쯤':'닫힘');
+  draw(); requestAnimationFrame(tick);
+}
+function update(){
+  calc();
+  if(val('aba')) msg('ABA 신호! K⁺가 빠져나가 물풍선이 쭈그러들며 닫혀요','#f29e9e');
+  else if(!val('light')) msg('어두워서 양성자 펌프가 꺼졌어요 → 닫힘','#9ed2f2');
+  else if(val('co2')||val('hot')) msg('빛은 있지만 CO₂ 과다·고온 때문에 덜 열려요','#f4d35e');
+  else msg('빛 → H⁺ 펌프 → K⁺ 유입 → 물 유입 → 팽압↑ → 열림','#a8e0a0');
+}
+onInputs(['light','co2','aba','hot'],update);
+requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li>열리는 순서: <span class="hl">빛(청색광) → 양성자펌프(H⁺-ATPase)가 H⁺를 밖으로 → K⁺ 유입(Cl⁻·말산도 함께) → 삼투퍼텐셜↓ → 물 유입 → 팽압↑ → 열림</span>.</li>
+  <li>공변세포는 기공 쪽 <b>안쪽 벽이 두껍고</b>, 셀룰로오스 미세섬유가 방사상으로 감겨 있어서 부풀면 바깥으로 휘어 틈이 벌어져요.</li>
+  <li>열림 조건: <span class="hg">빛, 낮은 CO₂ 농도, 충분한 수분</span>. 닫힘 조건: <span class="hp">어둠, 높은 CO₂, ABA(수분 스트레스), 고온·건조</span>.</li>
+  <li><span class="hp">ABA(앱시스산)</span> = 스트레스 호르몬. 가뭄 때 늘어나 K⁺를 빠져나가게 해서 기공을 닫아요.</li>
+  <li>기공은 대부분 <b>잎 뒷면</b>에 많아요. 증산의 약 90%가 기공으로 일어나요.</li>
+  <li>기공이 닫히면 물은 아끼지만 CO₂도 못 들어와 광합성이 줄어요 → 가뭄이 길면 나무가 굶어요(탄소 기아).</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>신호</th><th>기공</th><th>이유</th></tr>
+<tr><td class="hl">빛(청색광)</td><td>열림</td><td>H⁺ 펌프 작동 → K⁺ 유입</td></tr>
+<tr><td class="hb">CO₂ 높음</td><td>닫힘</td><td>더 받아들일 필요 없음</td></tr>
+<tr><td class="hp">ABA</td><td>닫힘</td><td>K⁺ 유출 → 팽압↓</td></tr>
+<tr><td class="ho">고온·건조</td><td>닫힘</td><td>수분 손실 방지</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"기공이 열릴 때 공변세포 안으로 들어오는 대표 이온은?","o":["Na⁺","K⁺","Ca²⁺","Mg²⁺"],"a":1,"e":"K⁺가 들어오면 삼투퍼텐셜이 낮아져 물이 들어오고, 팽압이 올라가 기공이 열려요."},
+{"q":"가뭄 때 기공을 닫게 하는 호르몬은?","o":["옥신","에틸렌","앱시스산(ABA)","지베렐린"],"a":2,"e":"ABA는 수분 스트레스 때 늘어나 공변세포의 K⁺를 빠져나가게 해요."},
+{"q":"기공을 여는 데 가장 효과적인 빛은?","o":["적외선","녹색광","청색광","자외선"],"a":2,"e":"청색광 수용체가 양성자 펌프를 활성화해 기공을 열어요. 광합성용 적색광도 간접적으로 도와요."},
+{"q":"기공이 닫히는 조건이 아닌 것은?","o":["어둠","잎 속 CO₂ 농도 높음","충분한 토양수분과 빛","ABA 증가"],"a":2,"e":"수분이 충분하고 빛이 있으면 기공은 열려요. 나머지는 모두 닫히는 조건이에요."}
+]

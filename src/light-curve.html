@@ -1,0 +1,90 @@
+<!--meta
+{"id":"light-curve","title":"그늘에서 버티는 나무, 햇빛을 먹는 나무 (광보상점·광포화점)","subject":"나무의사","unit":"수목생리학 · 광합성","summary":"빛 세기와 온도를 바꾸며 양수·음수의 광합성 곡선, 광보상점·광포화점을 비교하는 실험","added":"2026-11-19","headline":"나무에게 빛은 월급, 호흡은 생활비","sub":"광보상점·광포화점 — 양수와 음수의 차이"}
+-->
+<!--@intro-->
+<p class="lead">나무는 광합성으로 돈(당)을 벌고, 호흡으로 24시간 생활비를 써요. 버는 돈과 쓰는 돈이 딱 같아지는 빛의 세기가 <b>광보상점</b>, 빛을 아무리 늘려도 더는 월급이 안 오르는 지점이 <b>광포화점</b>이에요.</p>
+<p class="lead">그늘을 잘 견디는 <b>음수</b>(주목·전나무 등)는 월급은 적지만 생활비가 아주 적어서 어두운 숲 속에서도 흑자예요. 햇빛을 좋아하는 <b>양수</b>(소나무·자작나무 등)는 밝은 곳에서는 많이 벌지만, 그늘에서는 생활비를 못 벌어 굶어요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div>
+    <h3>조건 바꾸기</h3>
+    <div class="row"><label>빛 세기 <b id="vI"></b></label><input type="range" id="I" min="0" max="2000" value="400"><div class="hint">맑은 여름 한낮 약 2000, 숲 바닥 그늘 약 20~50 (µmol/m²/s)</div></div>
+    <div class="row"><label>기온 <b id="vT"></b></label><input type="range" id="T" min="5" max="40" value="20"><div class="hint">더워지면 호흡(생활비)이 늘어요.</div></div>
+    <div class="controls"><button data-i="30">🌲 숲 바닥</button><button data-i="300">⛅ 흐린 날</button><button data-i="1800">☀ 맑은 한낮</button></div>
+    <div class="tblwrap"><table>
+      <tr><th></th><th class="ho">양수 (소나무)</th><th class="hg">음수 (주목)</th></tr>
+      <tr><td>순광합성</td><td id="pS"></td><td id="pH"></td></tr>
+      <tr><td>광보상점</td><td id="cS"></td><td id="cH"></td></tr>
+      <tr><td>광포화점</td><td id="sS"></td><td id="sH"></td></tr>
+    </table></div>
+  </div>
+</div>
+<!--@js-->
+const SP={sun:{P:18,R:2.0,k:180,c:CH.orange,n:'양수'},shade:{P:6,R:0.5,k:40,c:CH.green,n:'음수'}};
+const st=makeCanvas('cv',0.85,draw);
+const Rt=(s)=>s.R*Math.pow(2,(val('T')-20)/10);
+const net=(s,I)=>s.P*I/(I+s.k)-Rt(s);
+const comp=s=>{const R=Rt(s); return R>=s.P? Infinity : R*s.k/(s.P-R);};
+const sat=s=>9*s.k;
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const L=W*0.12,Rr=W*0.96,T=H*0.1,B=H*0.86, Imax=2000, ymin=-5, ymax=18;
+  const X=I=>L+(Rr-L)*I/Imax, Y=v=>B-(B-T)*(v-ymin)/(ymax-ymin);
+  // 축
+  line(ctx,L,T,L,B,CH.chalk,2); line(ctx,L,Y(0),Rr,Y(0),CH.chalk,2);
+  txt(ctx,'순광합성(+이득 / −손해)',L+4,T-8,18,CH.dim,'left',W);
+  txt(ctx,'빛 세기 →',Rr,Y(0)+18,17,CH.dim,'right',W);
+  rect(ctx,L,Y(0),Rr-L,B-Y(0),'rgba(242,158,158,.08)');
+  txt(ctx,'손해 구간',L+8,B-8,16,CH.pink,'left',W);
+  for(const s of [SP.sun,SP.shade]){
+    ctx.beginPath(); for(let I=0;I<=Imax;I+=10){ const x=X(I),y=Y(net(s,I)); I?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.strokeStyle=s.c; ctx.lineWidth=3; ctx.stroke();
+    const c=comp(s); if(isFinite(c)&&c<Imax){ circle(ctx,X(c),Y(0),5,s.c); }
+    const sa=sat(s); if(sa<Imax){ line(ctx,X(sa),Y(net(s,sa)),X(sa),Y(0),s.c,1.5,[4,4]); }
+  }
+  txt(ctx,'양수',X(1700),Y(net(SP.sun,1700))-10,22,CH.orange,'center',W);
+  txt(ctx,'음수',X(1700),Y(net(SP.shade,1700))-10,22,CH.green,'center',W);
+  const I=val('I'); line(ctx,X(I),T,X(I),B,CH.yellow,2,[6,4]);
+  circle(ctx,X(I),Y(net(SP.sun,I)),6,CH.orange,CH.chalk,1.5); circle(ctx,X(I),Y(net(SP.shade,I)),6,CH.green,CH.chalk,1.5);
+  txt(ctx,'● 점 = 광보상점   점선 = 광포화점',W/2,H-4,16,CH.dim,'center',W);
+}
+function f1(v){ return (v>0?'+':'')+v.toFixed(1); }
+function update(){
+  const I=val('I'); setText('vI',I+(I<60?' (숲 바닥)':I<600?' (흐림·반그늘)':' (밝음)')); setText('vT',val('T')+'℃');
+  const a=net(SP.sun,I), b=net(SP.shade,I);
+  setText('pS',f1(a)); setText('pH',f1(b));
+  const cs=comp(SP.sun), ch=comp(SP.shade);
+  setText('cS',isFinite(cs)?Math.round(cs):'없음'); setText('cH',isFinite(ch)?Math.round(ch):'없음');
+  setText('sS','약 '+sat(SP.sun)); setText('sH','약 '+sat(SP.shade));
+  if(a<0&&b<0) msg('둘 다 호흡이 더 커서 손해예요. 이대로면 저장해 둔 당을 까먹어요','#f29e9e');
+  else if(a<0) msg('양수는 광보상점보다 어두워서 손해, 음수만 흑자예요','#f4d35e');
+  else if(b>a) msg('이 밝기에서는 음수가 더 이득이에요 (생활비가 적어서)','#a8e0a0');
+  else msg('밝을수록 양수가 훨씬 많이 벌어요. 음수는 금방 광포화','#f0a868');
+  draw();
+}
+document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ $('I').value=b.dataset.i; update(); });
+onInputs(['I','T'],update);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">광보상점</span>: 광합성량 = 호흡량 → 순광합성 0. 이보다 어두우면 나무는 손해예요.</li>
+  <li><span class="hl">광포화점</span>: 빛을 더 늘려도 광합성이 더 늘지 않는 빛 세기.</li>
+  <li><span class="hg">음수(내음성 강함)</span>는 광보상점·광포화점이 <b>낮고</b>, 호흡량이 적어요 → 숲 아래 그늘에서 살아남아요. 예: 주목, 전나무, 가문비나무, 서어나무, 너도밤나무, 비자나무.</li>
+  <li><span class="ho">양수</span>는 광보상점·광포화점이 <b>높고</b>, 최대 광합성량이 커요 → 밝은 곳에서 빨리 자라요. 예: 소나무, 자작나무, 낙엽송(일본잎갈나무), 버드나무, 포플러.</li>
+  <li>기온이 오르면 호흡이 늘어나 <span class="hp">광보상점이 높아지고 순광합성이 줄어요</span>. 그래서 열대야·고온은 나무의 탄수화물을 깎아 먹어요.</li>
+  <li>숲의 천이: 처음엔 양수가 들어오고, 그 그늘 밑에서 음수가 자라 결국 음수림(극상림)으로 바뀌어요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>구분</th><th>광보상점</th><th>광포화점</th><th>호흡</th><th>잘 사는 곳</th></tr>
+<tr><td class="ho">양수</td><td>높음</td><td>높음</td><td>많음</td><td>밝은 곳, 숲 가장자리</td></tr>
+<tr><td class="hg">음수</td><td>낮음</td><td>낮음</td><td>적음</td><td>숲 아래 그늘</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"광합성량과 호흡량이 같아져 순광합성이 0이 되는 빛의 세기는?","o":["광포화점","광보상점","광주기","임계일장"],"a":1,"e":"광보상점이에요. 이보다 어두우면 호흡이 더 커서 저장 탄수화물을 소비해요."},
+{"q":"음수(내음성 수종)의 특징으로 옳은 것은?","o":["광보상점이 높다","광포화점이 높다","호흡량이 적고 광보상점이 낮다","최대 광합성량이 양수보다 크다"],"a":2,"e":"음수는 호흡이 적고 광보상점·광포화점이 낮아 약한 빛에서도 흑자를 낼 수 있어요."},
+{"q":"다음 중 대표적인 음수는?","o":["소나무","자작나무","주목","버드나무"],"a":2,"e":"주목·전나무·서어나무·너도밤나무는 음수, 소나무·자작나무·버드나무·낙엽송은 양수예요."},
+{"q":"기온이 올라갈 때 일어나는 변화로 옳은 것은?","o":["호흡이 줄어 광보상점이 낮아진다","호흡이 늘어 광보상점이 높아진다","광포화점만 낮아진다","순광합성이 항상 늘어난다"],"a":1,"e":"고온에서는 호흡이 늘어 같은 빛에서도 순광합성이 줄고 광보상점이 높아져요."}
+]

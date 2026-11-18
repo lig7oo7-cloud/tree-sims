@@ -1,0 +1,104 @@
+<!--meta
+{"id":"phloem","title":"당은 압력으로 배달된다 (체관 압력류설·환상박피)","subject":"나무의사","unit":"수목생리학 · 탄수화물 이동","summary":"계절별 공급원·수용부를 바꾸고 환상박피를 해 보며 체관에서 설탕이 압력으로 흐르는 원리를 보는 실험","added":"2026-11-19","headline":"체관은 압력 택배 파이프","sub":"설탕을 넣는 곳(공급원)에서 빼는 곳(수용부)으로 — 압력류설"}
+-->
+<!--@intro-->
+<p class="lead">잎에서 만든 설탕은 뿌리, 열매, 새순까지 어떻게 갈까요? 잎(공급원, source)이 체관에 설탕을 꾹꾹 밀어 넣으면 옆 물관에서 물이 따라 들어와 압력이 높아져요. 설탕을 꺼내 쓰는 곳(수용부, sink)은 압력이 낮아서, 체관 속 액체가 <b>압력 높은 곳 → 낮은 곳</b>으로 밀려가요. 이게 <b>압력류설</b>(뮌히 가설)이에요.</p>
+<p class="lead">물관은 늘 위로만 가지만, 체관은 <b>설탕이 필요한 쪽이면 위로도 아래로도</b> 가요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>위쪽 당 저장: <b id="sU"></b></span><span>뿌리 당 저장: <b id="sR"></b></span><span>나무 상태: <b id="sH"></b></span></div>
+  </div>
+  <div>
+    <h3>계절 고르기</h3>
+    <div class="tabs" id="season"><button class="on" data-v="summer">여름 (잎이 공급원)</button><button data-v="spring">이른 봄 (뿌리가 공급원)</button></div>
+    <div class="row"><label>광합성 (설탕 적재) <b id="vL"></b></label><input type="range" id="load" min="0" max="100" value="70"></div>
+    <label class="check"><input type="checkbox" id="girdle"><div><b class="hp">✂ 환상박피 (줄기 껍질을 한 바퀴 벗기기)</b><div class="d">껍질 안쪽의 체관이 끊겨요. 물관(목질부)은 그대로예요.</div></div></label>
+    <div class="controls"><button id="reset">↺ 처음부터</button></div>
+  </div>
+</div>
+<!--@js-->
+let season='summer', upper=50, root=50, t=0, parts=[];
+const st=makeCanvas('cv',1.15,draw);
+function reset(){ upper=50; root=50; t=0; parts=[]; }
+function geom(){ const {W,H}=st; return {cx:W*0.5, top:H*0.2, mid:H*0.52, bot:H*0.82, W,H}; }
+function draw(){
+  const {ctx,W,H}=st; const g=geom(); ctx.clearRect(0,0,W,H);
+  // 수관(잎)
+  for(const [dx,dy,r] of [[-0.16,0.04,0.11],[0.14,0.035,0.11],[0,0.0,0.12]]) circle(ctx,g.cx+dx*W,g.top+dy*H,r*W, season==='summer'?'rgba(168,224,160,.28)':'rgba(168,224,160,.08)',CH.chalk,1.5);
+  if(season==='spring'){ for(let i=0;i<6;i++) circle(ctx,g.cx+(i-2.5)*W*0.07,g.top+H*0.04,5,'rgba(168,224,160,.9)'); txt(ctx,'새순 (수용부)',g.cx,20,20,CH.green,'center',W); }
+  else txt(ctx,'잎 (공급원)',g.cx,20,20,CH.green,'center',W);
+  // 줄기: 물관(안쪽) + 체관(바깥)
+  const xw=W*0.035, ph=W*0.03;
+  rect(ctx,g.cx-xw,g.top+H*0.1,xw*2,g.bot-g.top-H*0.1,'rgba(158,210,242,.18)',CH.blue,1.5);
+  rect(ctx,g.cx+xw,g.top+H*0.1,ph,g.bot-g.top-H*0.1,'rgba(240,168,104,.22)',CH.orange,1.5);
+  rect(ctx,g.cx-xw-ph,g.top+H*0.1,ph,g.bot-g.top-H*0.1,'rgba(240,168,104,.22)',CH.orange,1.5);
+  txt(ctx,'물관',g.cx,g.top+H*0.24,15,CH.blue,'center',W);
+  txt(ctx,'체관',g.cx+xw+ph+6,g.top+H*0.27,16,CH.orange,'left',W);
+  if(val('girdle')){ rect(ctx,g.cx-xw-ph-4,g.mid-10,xw*2+ph*2+8,20,'#1d2e25'); rect(ctx,g.cx-xw,g.mid-10,xw*2,20,'rgba(158,210,242,.18)',CH.blue,1.5); txt(ctx,'✂ 환상박피',g.cx+xw+ph+8,g.mid+6,18,CH.pink,'left',W);
+    // 혹(캘러스) 비대
+    const sw=Math.min(18,(upper-50)/4); if(sw>0){ ctx.beginPath(); ctx.ellipse(g.cx,g.mid-14,xw+ph+sw,8,0,0,Math.PI*2); ctx.strokeStyle=CH.orange; ctx.lineWidth=2; ctx.stroke(); } }
+  // 뿌리
+  ctx.strokeStyle=CH.chalk; ctx.lineWidth=2;
+  for(const dx of [-0.25,-0.12,0,0.12,0.25]){ ctx.beginPath(); ctx.moveTo(g.cx,g.bot); ctx.quadraticCurveTo(g.cx+dx*W*0.5,g.bot+H*0.06,g.cx+dx*W,g.bot+H*0.12); ctx.stroke(); }
+  txt(ctx, season==='summer'?'뿌리 (수용부)':'뿌리 저장 녹말 (공급원)', g.cx, H-8, 20, CH.chalk,'center',W);
+  // 설탕 입자
+  parts.forEach(p=> txt(ctx,'●',p.x,p.y,11,CH.yellow,'center'));
+  // 압력 표시
+  const pTop = season==='summer'? val('load')/100 : 0.15, pBot = season==='summer'? 0.15 : 0.8;
+  txt(ctx,'압력 '+(pTop>pBot?'높음':'낮음'),W*0.05,g.top+H*0.22,18,pTop>pBot?CH.pink:CH.blue,'left',W);
+  txt(ctx,'압력 '+(pBot>pTop?'높음':'낮음'),W*0.05,g.bot-6,18,pBot>pTop?CH.pink:CH.blue,'left',W);
+  // 저장 막대
+  rect(ctx,W*0.88,g.top,12,H*0.25,null,CH.dim,1); rect(ctx,W*0.88,g.top+H*0.25*(1-upper/100),12,H*0.25*upper/100,CH.yellow);
+  rect(ctx,W*0.88,g.bot-H*0.25,12,H*0.25,null,CH.dim,1); rect(ctx,W*0.88,g.bot-H*0.25*root/100,12,H*0.25*root/100,CH.yellow);
+  txt(ctx,'위',W*0.88+6,g.top-6,16,CH.dim,'center',W); txt(ctx,'뿌리',W*0.88+6,g.bot+16,16,CH.dim,'center',W);
+}
+function tick(){
+  const g=geom(); t++;
+  const L=val('load')/100, gird=val('girdle');
+  const down = season==='summer';
+  const rate = down? L : 0.6;
+  const xs=[g.cx+st.W*0.035+st.W*0.015, g.cx-st.W*0.035-st.W*0.015];
+  if(Math.random()<rate*0.5) parts.push({x:xs[Math.random()<.5?0:1], y: down? g.top+st.H*0.12 : g.bot-4, v: (down?1:-1)*(0.8+rate*1.5)});
+  parts.forEach(p=>{ const blocked = gird && ((p.v>0 && p.y>g.mid-14 && p.y<g.mid-8) || (p.v<0 && p.y<g.mid+14 && p.y>g.mid+8)); if(!blocked) p.y+=p.v; else p.stuck=(p.stuck||0)+1; });
+  parts = parts.filter(p=>{ if(p.v>0 && p.y>g.bot){ root=clamp(root+0.35,0,100); return false;} if(p.v<0 && p.y<g.top+st.H*0.1){ upper=clamp(upper+0.35,0,100); return false;} if(p.stuck>40){ if(p.v>0) upper=clamp(upper+0.3,0,100); else root=clamp(root+0.3,0,100); return false;} return true; });
+  // 소비: 뿌리 호흡, 위쪽 소비
+  if(t%6===0){ root=clamp(root-0.4,0,100); upper=clamp(upper-(down?0.1:0.45),0,100); if(down) upper=clamp(upper+L*0.15,0,100); else root=clamp(root-0.2,0,100); }
+  setText('sU',Math.round(upper)+''); setText('sR',Math.round(root)+'');
+  const health = root<10? '뿌리 굶어 죽어가는 중' : root<30? '뿌리가 약해짐' : '건강';
+  setText('sH',health);
+  if(gird && down && root<30) msg('환상박피 위쪽엔 설탕이 쌓이고 뿌리는 굶어요 → 결국 나무 전체가 죽어요','#f29e9e');
+  else if(gird && down) msg('체관이 끊겼어요. 설탕이 상처 위에 막혀 쌓이는 중…','#f4d35e');
+  else if(gird) msg('봄: 뿌리 저장당이 위로 못 올라가 새순이 굶어요','#f29e9e');
+  else if(down) msg('여름: 잎(공급원, 압력↑) → 뿌리·열매(수용부, 압력↓)로 아래로 흘러요','#a8e0a0');
+  else msg('이른 봄: 뿌리의 저장 녹말을 설탕으로 바꿔 새순 쪽 위로 보내요','#a8e0a0');
+  draw(); requestAnimationFrame(tick);
+}
+segButtons('season',v=>{ season=v; parts=[]; });
+$('reset').onclick=()=>{ $('girdle').checked=false; reset(); };
+onInputs(['load'],()=>setText('vL',val('load')<20?'약함':val('load')<60?'보통':'활발'));
+requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">압력류설(뮌히)</span>: 공급원에서 설탕 적재(에너지 사용) → 삼투로 물관의 물이 체관으로 들어옴 → 압력↑ → 수용부로 흐름 → 수용부에서 하역 → 물은 다시 물관으로.</li>
+  <li><span class="hl">공급원(source)</span>: 광합성하는 성숙한 잎, 이른 봄의 저장기관(뿌리·줄기). <span class="hl">수용부(sink)</span>: 뿌리, 열매, 새순, 형성층, 저장조직.</li>
+  <li>체관으로 주로 이동하는 당은 <span class="hl">설탕(자당, sucrose)</span>이에요. 포도당처럼 반응성이 큰 환원당은 거의 이동하지 않아요. 일부 수종은 라피노스·스타키오스, 당알코올(만니톨 등)도 옮겨요.</li>
+  <li>물관(목부)은 <b>죽은 세포</b>, 위로만 이동. 체관(사부)은 <b>살아 있는 세포</b>, 반세포(동반세포)의 도움을 받고 양방향 이동.</li>
+  <li><span class="hp">환상박피</span>: 껍질과 체관이 끊겨 → 상처 위쪽에 탄수화물이 쌓여 부풀고, 뿌리는 굶어 서서히 죽어요. 물관은 살아 있어 한동안 잎이 푸르게 보여요. 칡·덩굴이 줄기를 조르거나 지지대 철사가 파고들 때도 같은 일이 생겨요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th></th><th class="hb">물관 (목부)</th><th class="ho">체관 (사부)</th></tr>
+<tr><td>세포</td><td>죽은 세포</td><td>살아 있는 세포</td></tr>
+<tr><td>운반</td><td>물·무기양분</td><td>설탕 등 동화산물</td></tr>
+<tr><td>방향</td><td>위로만</td><td>위·아래 양방향</td></tr>
+<tr><td>원동력</td><td>증산 장력</td><td>압력 차 (압력류)</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"체관에서 주로 이동하는 탄수화물은?","o":["포도당","과당","설탕(자당)","녹말"],"a":2,"e":"체관 이동의 주성분은 비환원당인 설탕(자당)이에요. 녹말은 저장 형태라 이동하지 않아요."},
+{"q":"이른 봄 새순이 자랄 때 공급원(source) 역할을 하는 곳은?","o":["새순","뿌리·줄기의 저장조직","열매","형성층"],"a":1,"e":"잎이 아직 없을 때는 뿌리·줄기에 저장한 녹말을 설탕으로 바꿔 위로 보내요."},
+{"q":"환상박피를 했을 때 나타나는 현상으로 옳은 것은?","o":["물 이동이 즉시 멈춘다","박피 위쪽에 탄수화물이 쌓이고 뿌리가 굶는다","박피 아래쪽이 부풀어 오른다","잎이 즉시 시든다"],"a":1,"e":"체관이 끊겨 위쪽에 탄수화물이 쌓여 부풀고, 뿌리는 탄수화물을 못 받아 서서히 죽어요. 물관은 남아 있어 잎은 한동안 유지돼요."},
+{"q":"체관과 물관의 비교로 틀린 것은?","o":["물관은 죽은 세포다","체관은 양방향 이동이 가능하다","체관은 증산 장력으로 움직인다","체관은 반세포의 도움을 받는다"],"a":2,"e":"증산 장력은 물관의 원동력이에요. 체관은 공급원과 수용부의 압력 차로 움직여요."}
+]

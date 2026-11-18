@@ -1,0 +1,106 @@
+<!--meta
+{"id":"tree-rings","title":"나이테는 나무의 일기장 (춘재·추재·환공재·산공재)","subject":"나무의사","unit":"수목생리학 · 생장","summary":"해마다 날씨를 골라 나이테를 키우며 춘재·추재, 위연륜, 환공재·산공재·침엽수 목재 구조를 비교하는 실험","added":"2026-11-19","headline":"나이테는 나무가 1년에 한 줄씩 쓰는 일기","sub":"봄엔 굵고 연하게, 여름·가을엔 촘촘하고 진하게"}
+-->
+<!--@intro-->
+<p class="lead">줄기 껍질 바로 안쪽에는 얇은 세포층인 <b>형성층</b>이 있어요. 형성층은 해마다 안쪽으로 새 목재(목부)를 쌓아요. 봄에는 물을 많이 날라야 해서 <b>크고 벽 얇은 세포</b>(춘재, 이른재)를 만들어 색이 연하고, 여름~가을에는 <b>작고 벽 두꺼운 세포</b>(추재, 늦재)를 만들어 색이 진해요. 진한 추재와 다음 해 연한 춘재 사이의 경계가 바로 나이테 한 줄이에요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>나이: <b id="sAge">0</b>살</span><span>지름: <b id="sD">0</b> cm</span></div>
+  </div>
+  <div>
+    <h3>목재 종류</h3>
+    <div class="tabs" id="wood"><button class="on" data-v="ring">환공재 (참나무)</button><button data-v="diff">산공재 (단풍나무)</button><button data-v="conifer">침엽수 (소나무)</button></div>
+    <h3>올해 날씨 고르고 1년 키우기</h3>
+    <div class="controls">
+      <button data-y="good">🌧 비 넉넉</button>
+      <button data-y="normal">⛅ 보통</button>
+      <button data-y="drought">🔥 가뭄</button>
+      <button data-y="false">↯ 한여름 가뭄 후 비</button>
+    </div>
+    <div class="controls"><button id="auto" class="primary">▶ 10년 자동</button><button id="reset">↺ 새 나무</button></div>
+    <div class="row"><label>그해 날씨 기록</label><div id="log" class="hint">아직 없음</div></div>
+  </div>
+</div>
+<!--@js-->
+let rings=[], wood='ring', autoN=0;
+const st=makeCanvas('cv',1.05,draw);
+const W8={good:1.5,normal:1,drought:0.45,false:0.95};
+function addYear(type){ rings.push({type,w:W8[type]*(0.85+Math.random()*0.3)}); update(); }
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H*0.47, maxR=W*0.39;
+  const tot=rings.reduce((s,r)=>s+r.w,0)+0.6;
+  const scale=Math.min(maxR/Math.max(tot,6), maxR/6);
+  let r=0.6*scale;
+  // 수(髓)
+  circle(ctx,cx,cy,r,'rgba(176,119,63,.5)');
+  rings.forEach((ring,i)=>{
+    const w=ring.w*scale, early = ring.type==='false'? w*0.4 : w*0.72, late = w-early;
+    // 춘재
+    circle(ctx,cx,cy,r+early,null,'rgba(240,214,160,.35)',early);
+    ctx.beginPath(); ctx.arc(cx,cy,r+early/2,0,Math.PI*2); ctx.strokeStyle='rgba(236,206,150,.30)'; ctx.lineWidth=early; ctx.stroke();
+    // 위연륜: 춘재 중간에 진한 띠
+    if(ring.type==='false'){ ctx.beginPath(); ctx.arc(cx,cy,r+early*0.6,0,Math.PI*2); ctx.strokeStyle='rgba(150,95,45,.7)'; ctx.lineWidth=Math.max(1,late*0.4); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx,cy,r+early+late*0.3,0,Math.PI*2); ctx.strokeStyle='rgba(236,206,150,.30)'; ctx.lineWidth=late*0.6; ctx.stroke(); }
+    // 추재
+    ctx.beginPath(); ctx.arc(cx,cy,r+w-late/2,0,Math.PI*2); ctx.strokeStyle='rgba(150,95,45,.85)'; ctx.lineWidth=Math.max(1.5,late); ctx.stroke();
+    // 도관(구멍)
+    if(wood!=='conifer'){
+      const n = Math.round((r+w)*0.5);
+      for(let k=0;k<n;k++){ const a=(k/n)*Math.PI*2 + i*0.7;
+        if(wood==='ring'){ const rr=r+early*0.3; circle(ctx,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,Math.max(1.2,early*0.22),'rgba(29,46,37,.9)'); }
+        else { for(let j=0;j<2;j++){ const rr=r+w*(0.25+0.45*j)+((k*7)%5)/5*w*0.2; circle(ctx,cx+Math.cos(a+j*0.3)*rr,cy+Math.sin(a+j*0.3)*rr,Math.max(0.8,w*0.06),'rgba(29,46,37,.8)'); } }
+      }
+    }
+    r+=w;
+  });
+  // 형성층 + 수피
+  circle(ctx,cx,cy,r+2,null,CH.green,2);
+  circle(ctx,cx,cy,r+7,null,CH.chalk,4);
+  txt(ctx,'형성층',cx+r*0.71+8,cy-r*0.71-8,18,CH.green,'left',W);
+  if(!rings.length) txt(ctx,'날씨를 골라 1년씩 키워 보세요',W/2,H-10,18,CH.dim,'center',W);
+  else txt(ctx,'연한 띠=춘재  진한 띠=추재',W/2,H-8,17,CH.dim,'center',W);
+}
+function update(){
+  setText('sAge',rings.length);
+  setText('sD',(rings.reduce((s,r)=>s+r.w,0)*0.8).toFixed(1));
+  const names={good:'🌧',normal:'⛅',drought:'🔥',false:'↯'};
+  $('log').textContent = rings.length? rings.map((r,i)=>(i+1)+'년 '+names[r.type]).join('  ') : '아직 없음';
+  const last=rings[rings.length-1];
+  if(!last) msg(wood==='ring'?'환공재: 봄 춘재에 큰 도관이 고리처럼 늘어서요':wood==='diff'?'산공재: 비슷한 크기 도관이 고르게 흩어져요':'침엽수: 도관이 없고 헛물관(가도관)으로 물을 날라요','#a8e0a0');
+  else if(last.type==='drought') msg('가뭄 해엔 나이테가 좁아요. 나이테 폭으로 옛날 기후를 읽을 수 있어요','#f4d35e');
+  else if(last.type==='false') msg('한 해에 진한 띠가 두 개! 이게 위연륜(가짜 나이테) — 나이 셀 때 주의','#f29e9e');
+  else if(last.type==='good') msg('비가 넉넉한 해엔 나이테가 넓어요','#a8e0a0');
+  else msg('올해도 춘재 → 추재 순서로 한 줄 추가','#a8e0a0');
+  draw();
+}
+document.querySelectorAll('[data-y]').forEach(b=>b.onclick=()=>addYear(b.dataset.y));
+segButtons('wood',v=>{ wood=v; update(); });
+$('reset').onclick=()=>{ rings=[]; update(); };
+$('auto').onclick=()=>{ let n=0; const iv=setInterval(()=>{ const r=Math.random(); addYear(r<0.15?'drought':r<0.45?'good':r<0.52?'false':'normal'); if(++n>=10) clearInterval(iv); },350); };
+update();
+<!--@teacher-->
+<ol>
+  <li><span class="hl">춘재(조재, 이른재)</span>: 봄, 세포가 크고 벽이 얇아 색이 연해요. <span class="ho">추재(만재, 늦재)</span>: 여름~가을, 세포가 작고 벽이 두꺼워 색이 진해요.</li>
+  <li>나이테 경계 = <b>그해 추재와 다음 해 춘재 사이</b>. 계절 구분이 없는 열대에서는 나이테가 뚜렷하지 않아요.</li>
+  <li><span class="hp">위연륜(가짜 나이테)</span>: 한 생장기 안에 가뭄·병해충·서리로 생장이 멈췄다 다시 자라면 한 해에 띠가 두 개 생겨요.</li>
+  <li><span class="hl">환공재</span>: 춘재에 큰 도관이 고리 모양으로 모여 있어요. 예: 참나무류, 물푸레나무, 느릅나무, 밤나무, 아까시나무. <span class="hb">산공재</span>: 비슷한 도관이 고르게 흩어져 있어요. 예: 단풍나무, 자작나무, 피나무, 버즘나무, 포플러.</li>
+  <li><span class="hg">침엽수</span>는 도관이 없고 <b>헛물관(가도관)</b>으로 물을 날라요(소나무 목재의 약 90% 이상이 헛물관).</li>
+  <li>형성층은 안쪽으로 <b>목부(물관부)</b>, 바깥쪽으로 <b>사부(체관부)</b>를 만들고, 목부를 훨씬 많이 만들어요. 그래서 목재가 굵어지고 껍질은 얇게 유지돼요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>구분</th><th>물 나르는 세포</th><th>배열</th><th>예</th></tr>
+<tr><td class="hl">환공재</td><td>도관</td><td>춘재에 큰 도관이 고리</td><td>참나무, 물푸레, 느릅</td></tr>
+<tr><td class="hb">산공재</td><td>도관</td><td>고르게 흩어짐</td><td>단풍, 자작, 피나무</td></tr>
+<tr><td class="hg">침엽수</td><td>헛물관(가도관)</td><td>도관 없음</td><td>소나무, 잣나무, 전나무</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"추재(만재)의 특징으로 옳은 것은?","o":["세포가 크고 벽이 얇다","세포가 작고 벽이 두꺼워 색이 진하다","봄에 만들어진다","도관이 가장 크다"],"a":1,"e":"추재는 여름~가을에 만들어지며 세포가 작고 벽이 두꺼워 진하게 보여요."},
+{"q":"한 생장기 안에 생장이 멈췄다 다시 자라 생긴 가짜 나이테는?","o":["위연륜","심재","변재","이상재"],"a":0,"e":"위연륜(false ring)이에요. 가뭄·서리·식엽 피해 뒤 다시 자랄 때 생겨요."},
+{"q":"다음 중 환공재가 아닌 것은?","o":["참나무","물푸레나무","느릅나무","단풍나무"],"a":3,"e":"단풍나무는 도관이 고르게 흩어진 산공재예요."},
+{"q":"침엽수 목재에서 물을 운반하는 주요 세포는?","o":["도관","헛물관(가도관)","체관","반세포"],"a":1,"e":"침엽수는 도관이 없고 헛물관(가도관)이 물 운반과 지지를 함께 맡아요."}
+]

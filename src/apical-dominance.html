@@ -1,0 +1,108 @@
+<!--meta
+{"id":"apical-dominance","title":"끝눈은 동생 눈들의 대장 (정아우세와 옥신)","subject":"나무의사","unit":"수목생리학 · 호르몬","summary":"끝눈 자르기, 옥신 바르기, 시토키닌 처리를 해 보며 정아우세와 가지치기 반응, 수형 차이를 보는 실험","added":"2026-11-19","headline":"끝눈이 \"가만있어!\" 하고 옆눈을 누른다","sub":"정아우세 — 옥신은 위에서 아래로 흐른다"}
+-->
+<!--@intro-->
+<p class="lead">가지 맨 끝의 눈(<b>끝눈, 정아</b>)은 <b>옥신</b>이라는 호르몬을 만들어 아래로 계속 흘려보내요. 옥신이 많이 흐르는 동안 옆의 눈들(<b>곁눈, 측아</b>)은 "아직은 기다려" 하고 잠자코 있어요. 대장이 사라지면(끝눈을 자르면) 옆눈들이 앞다투어 자라요. 그래서 순지르기(적심)를 하면 가지가 많아지고 덤불처럼 돼요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div>
+    <h3>정아우세 세기 (수종)</h3>
+    <div class="tabs" id="sp"><button class="on" data-v="strong">강함 (전나무형)</button><button data-v="weak">약함 (느티나무형)</button></div>
+    <h3>처리해 보기</h3>
+    <div class="controls">
+      <button id="cut">✂ 끝눈 자르기</button>
+      <button id="aux">🧴 자른 곳에 옥신 바르기</button>
+      <button id="cyt">💧 곁눈에 시토키닌</button>
+    </div>
+    <div class="controls"><button id="grow" class="primary">▶ 한 철 키우기</button><button id="reset">↺ 처음부터</button></div>
+  </div>
+</div>
+<!--@js-->
+let sp='strong', cut=false, auxPaste=false, cyto=false, buds=[], mainLen=0, flows=[], growing=null, steps=0;
+const st=makeCanvas('cv',1.15,draw);
+function reset(){ cut=false; auxPaste=false; cyto=false; mainLen=0; steps=0; buds=[]; for(let i=0;i<6;i++) buds.push({h:0.18+i*0.11, side:i%2?1:-1, len:0}); flows=[]; update(); }
+function auxinAt(h){ // h: 0(아래)~1(위)
+  const src = (!cut || auxPaste)? 1 : 0;
+  const decay = sp==='strong'? 0.25: 0.85;
+  const dist = (topH()-h);
+  return src*Math.exp(-dist*decay*3);
+}
+function topH(){ return 0.8+mainLen; }
+function step(){
+  steps++;
+  if(!cut) mainLen=Math.min(0.15,mainLen+0.004);
+  buds.forEach((b,i)=>{
+    const a=auxinAt(b.h);
+    let g = Math.max(0, 0.012*(1-a*1.15)) + (cyto?0.006:0);
+    if(sp==='strong') g*= (0.4+0.6*(1-b.h)); // 아래 가지가 더 길게 → 원추형
+    b.len=Math.min(0.45,b.len+g);
+  });
+  if(steps>=60){ clearInterval(growing); growing=null; }
+  update();
+}
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const cx=W*0.5, base=H*0.95, scale=H*0.95;
+  const top = base - topH()*scale*0.95;
+  line(ctx,cx,base,cx,top,CH.brown,7);
+  // 옥신 흐름 점
+  flows.forEach(f=> txt(ctx,'•',cx+3,base-f*scale*0.95,16,CH.yellow,'center'));
+  // 끝눈
+  if(!cut){ ctx.beginPath(); ctx.ellipse(cx,top-8,6,11,0,0,Math.PI*2); ctx.fillStyle=CH.green; ctx.fill(); txt(ctx,'끝눈(정아)',cx+12,top-4,18,CH.green,'left',W); }
+  else { line(ctx,cx-8,top,cx+8,top,CH.pink,3); txt(ctx,auxPaste?'자른 곳 + 옥신':'✂ 잘림',cx+12,top+4,18,auxPaste?CH.yellow:CH.pink,'left',W); }
+  // 곁눈 / 가지
+  buds.forEach(b=>{
+    const y=base-b.h*scale*0.95, L=b.len*W;
+    const ex=cx+b.side*Math.max(6,L), ey=y-L*0.55;
+    if(L>4){ line(ctx,cx,y,ex,ey,CH.brown,3); circle(ctx,ex,ey,4,CH.green); }
+    else { ctx.beginPath(); ctx.ellipse(cx+b.side*7,y-3,4,6,b.side*0.6,0,Math.PI*2); ctx.fillStyle=cyto?CH.blue:'rgba(168,224,160,.6)'; ctx.fill(); }
+    const a=auxinAt(b.h); rect(ctx,cx-b.side*(W*0.3)-(b.side<0?0:30),y-5,30*a,6,CH.yellow);
+  });
+  txt(ctx,'노란 막대 = 그 높이의 옥신 농도',W/2,18,17,CH.dim,'center',W);
+}
+function tick(){
+  if((!cut||auxPaste) && Math.random()<0.25) flows.push(topH());
+  flows=flows.map(f=>f-0.01).filter(f=>f>0);
+  draw(); requestAnimationFrame(tick);
+}
+function update(){
+  const grownTop = buds.slice(-2).reduce((s,b)=>s+b.len,0), grownLow=buds.slice(0,2).reduce((s,b)=>s+b.len,0);
+  if(cut && !auxPaste && steps>20) msg('대장이 사라졌어요! 위쪽 곁눈부터 앞다투어 자라요 → 가지가 많아짐','#f4d35e');
+  else if(cut && auxPaste) msg('자른 곳에 옥신을 바르니 곁눈이 다시 억제돼요 → 끝눈의 힘은 옥신!','#a8e0a0');
+  else if(cyto && steps>20) msg('시토키닌은 곁눈을 깨워요 (옥신과 반대 역할)','#9ed2f2');
+  else if(steps>20 && sp==='strong') msg('정아우세가 강하면 아래 가지가 길고 위가 짧은 원뿔(원추형) 수형','#a8e0a0');
+  else if(steps>20) msg('정아우세가 약하면 곁가지가 고르게 자라 둥근 수형','#a8e0a0');
+  else msg('끝눈의 옥신이 줄기를 타고 아래로 흘러요 (극성 이동)','#a8e0a0');
+}
+segButtons('sp',v=>{ sp=v; reset(); });
+$('cut').onclick=()=>{ cut=true; update(); };
+$('aux').onclick=()=>{ if(!cut){ msg('먼저 끝눈을 잘라야 옥신을 바를 수 있어요','#f29e9e'); return;} auxPaste=true; update(); };
+$('cyt').onclick=()=>{ cyto=true; update(); };
+$('grow').onclick=()=>{ if(growing) return; steps=0; growing=setInterval(step,60); };
+$('reset').onclick=()=>{ if(growing){clearInterval(growing);growing=null;} reset(); };
+reset(); requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">정아우세</span>: 끝눈(정아)에서 만든 <b>옥신</b>이 아래로 <b>극성 이동</b>하며 곁눈(측아)의 생장을 억제하는 현상.</li>
+  <li>끝눈을 자르면(순지르기·적심·두목전정) 억제가 풀려 곁눈이 자라 <b>가지 수가 늘어요</b>. 자른 곳에 옥신을 발라 주면 다시 억제돼요 → 원인이 옥신이라는 증거.</li>
+  <li><span class="hb">시토키닌</span>(주로 뿌리에서 합성)은 곁눈 생장을 <b>촉진</b>해 옥신과 반대로 작용해요.</li>
+  <li>정아우세가 <b>강한</b> 수종은 원뿔 모양(원추형) 수관: 전나무, 가문비나무, 독일가문비, 낙엽송, 메타세쿼이아. <b>약한</b> 수종은 둥글고 퍼진 수관: 느티나무, 대부분의 활엽수 성목.</li>
+  <li>옥신의 다른 역할: 굴광성·굴지성, 발근 촉진(삽목할 때 IBA·NAA 처리), 낙과·낙엽 지연, 형성층 활동 촉진.</li>
+  <li>우듬지(주간 끝)가 부러지면 바로 아래 곁가지가 위로 서며 새 우듬지 역할을 대신해요. 주간이 여러 개(쌍가지)가 되면 구조적으로 약해지니 하나로 정리해요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>호르몬</th><th>곁눈에</th><th>주 합성 부위</th></tr>
+<tr><td class="hl">옥신</td><td>억제</td><td>끝눈·어린 잎</td></tr>
+<tr><td class="hb">시토키닌</td><td>촉진</td><td>뿌리 끝</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"정아우세를 일으키는 주된 호르몬은?","o":["옥신","시토키닌","에틸렌","앱시스산"],"a":0,"e":"끝눈에서 만든 옥신이 아래로 이동하며 곁눈 생장을 억제해요."},
+{"q":"끝눈을 자른 뒤 자른 자리에 옥신을 발라 주면?","o":["곁눈이 더 빨리 자란다","곁눈의 생장이 다시 억제된다","뿌리가 죽는다","잎이 떨어진다"],"a":1,"e":"옥신이 끝눈 역할을 대신해 곁눈 억제가 유지돼요."},
+{"q":"곁눈의 생장을 촉진해 옥신과 반대로 작용하는 호르몬은?","o":["지베렐린","시토키닌","앱시스산","에틸렌"],"a":1,"e":"주로 뿌리에서 만들어지는 시토키닌이 곁눈 생장을 촉진해요."},
+{"q":"정아우세가 강해 원추형 수형을 보이는 수종은?","o":["느티나무","전나무","버드나무","팽나무"],"a":1,"e":"전나무·가문비나무 같은 침엽수는 정아우세가 강해 원뿔 모양 수관을 이뤄요."}
+]
