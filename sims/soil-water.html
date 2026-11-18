@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>흙 속 물은 다 같은 물이 아니다 (포장용수량·위조점·유효수분) · 칠판 시뮬레이션</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--board:#24372d;--board2:#1d2e25;--frame:#6b4a2f;--chalk:#f1efe6;--dim:rgba(241,239,230,.6);
+    --yellow:#f4d35e;--pink:#f29e9e;--blue:#9ed2f2;--green:#a8e0a0;--orange:#f0a868}
+  *{box-sizing:border-box}
+  body{margin:0;background:#2b2118;color:var(--chalk);font-family:"Noto Sans KR",sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:14px}
+  .back{display:inline-block;margin:0 0 10px;color:var(--yellow);text-decoration:none;font-size:.95rem}
+  .board{background:radial-gradient(ellipse at 30% 20%,#2c4436 0%,var(--board) 45%,var(--board2) 100%);
+    border:14px solid var(--frame);border-radius:10px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.5);
+    padding:18px 18px 22px;margin-bottom:18px}
+  h1,h2,h3{font-family:"Nanum Pen Script",cursive;font-weight:400;letter-spacing:.5px}
+  h1{font-size:2.5rem;margin:0 0 6px;line-height:1.15}
+  h1 small{display:block;font-size:1.45rem;color:var(--yellow)}
+  h2{font-size:2rem;margin:4px 0 8px;color:var(--yellow)}
+  h3{font-size:1.5rem;margin:4px 0;color:var(--yellow)}
+  p{margin:6px 0}
+  .lead{color:var(--dim);font-size:.95rem}
+  .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .canvasBox{background:rgba(0,0,0,.12);border:1px dashed rgba(241,239,230,.25);border-radius:8px;padding:6px}
+  canvas{display:block;width:100%;touch-action:manipulation}
+  .msg{font-family:"Nanum Pen Script",cursive;font-size:1.55rem;min-height:2.1rem;color:var(--green);text-align:center;line-height:1.25;margin:6px 0}
+  .stat{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:.9rem;color:var(--dim)}
+  .stat b{color:var(--chalk)}
+  button,.tab{font-family:"Noto Sans KR",sans-serif;font-size:.92rem;background:transparent;color:var(--chalk);
+    border:1.5px solid rgba(241,239,230,.6);border-radius:6px;padding:7px 12px;cursor:pointer}
+  button:hover{background:rgba(241,239,230,.1)}
+  button.on,.tab.on{background:var(--chalk);color:var(--board2);font-weight:700}
+  button.primary{border-color:var(--yellow);color:var(--yellow)}
+  .controls,.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .row{margin:10px 0}
+  .row label{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}
+  .row label b{color:var(--yellow);white-space:nowrap}
+  .row input[type=range]{width:100%;accent-color:var(--yellow)}
+  .row .hint{font-size:.8rem;color:var(--dim)}
+  .num{width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid rgba(241,239,230,.4);background:rgba(0,0,0,.2);color:var(--chalk);font-size:1rem}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:8px;border:1px solid rgba(241,239,230,.18);margin:6px 0;cursor:pointer}
+  .check input{margin-top:5px;width:18px;height:18px;accent-color:var(--yellow)}
+  .check .d{font-size:.84rem;color:var(--dim)}
+  .big{font-family:"Nanum Pen Script",cursive;font-size:2.4rem;color:var(--yellow);line-height:1.1}
+  .note{border-left:3px solid var(--yellow);padding:4px 10px;margin:10px 0;font-size:.92rem}
+  .teacher li{margin:6px 0}
+  .hl{color:var(--yellow)} .hp{color:var(--pink)} .hb{color:var(--blue)} .hg{color:var(--green)} .ho{color:var(--orange)}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;margin-top:8px}
+  td,th{border-bottom:1px dashed rgba(241,239,230,.25);padding:6px 4px;text-align:left;vertical-align:top}
+  th{font-family:"Nanum Pen Script",cursive;font-size:1.3rem;font-weight:400;color:var(--yellow)}
+  .tblwrap{overflow-x:auto}
+  .q{border:1px solid rgba(241,239,230,.2);border-radius:8px;padding:10px 12px;margin:10px 0}
+  .q .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .q .opts button.right{background:rgba(168,224,160,.25);border-color:var(--green)}
+  .q .opts button.wrong{background:rgba(242,158,158,.2);border-color:var(--pink)}
+  .q .exp{display:none;font-size:.9rem;margin-top:8px;color:var(--dim)}
+  .q.done .exp{display:block}
+  .foot{font-size:.8rem;color:var(--dim);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← 시뮬레이션 목록</a>
+  <div class="board">
+    <h1>흙은 물을 꽉 쥔 스펀지<small>얼마나 세게 쥐고 있느냐가 뿌리가 먹을 수 있는지를 정한다</small></h1>
+    <p class="lead">비가 온 직후 흙은 물에 푹 젖어 있어요(<b>포화</b>). 큰 틈의 물은 하루 이틀 사이 중력에 끌려 아래로 빠져요(<b>중력수</b>). 빠질 물이 다 빠진 상태가 <b>포장용수량</b>이에요. 그다음부터 나무는 작은 틈의 물을 빨아 먹는데, 흙이 마를수록 남은 물을 흙이 더 세게 쥐고 놓지 않아요. 결국 뿌리 힘으로 못 빼내는 지점, 밤이 지나도 잎이 회복되지 않는 지점이 <b>영구위조점</b>이에요. 그 사이가 나무가 실제로 쓸 수 있는 <b>유효수분</b>이에요.</p>
+  </div>
+  <div class="board">
+    <div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>비 온 뒤: <b id="sDay">0</b>일</span><span>수분 함량: <b id="sW"></b></span><span>수분퍼텐셜: <b id="sPsi"></b></span></div>
+  </div>
+  <div>
+    <h3>흙 종류</h3>
+    <div class="tabs" id="tex"><button data-v="sand">사토</button><button class="on" data-v="loam">양토</button><button data-v="clay">식토</button></div>
+    <div class="row"><label>흙 수분 <b id="vW"></b></label><input type="range" id="w" min="0" max="100" value="100"></div>
+    <div class="controls"><button id="play" class="primary">▶ 비 온 뒤 마르는 과정</button><button id="rain">🌧 다시 비</button></div>
+    <div class="tblwrap"><table id="tbl"></table></div>
+  </div>
+</div>
+  </div>
+  <div class="board teacher">
+    <h2>선생님 한마디 — 시험에 나오는 것만</h2>
+    <ol>
+  <li><span class="hb">포화</span>(0 MPa) → 중력수가 빠짐 → <span class="hg">포장용수량</span>(약 −0.033 MPa = −1/3 bar) → 식물이 흡수 → <span class="hp">영구위조점</span>(약 −1.5 MPa = −15 bar) → <span class="hl">흡습계수</span>(약 −3.1 MPa = −31 bar).</li>
+  <li><span class="hg">유효수분 = 포장용수량 − 영구위조점</span>. 식물이 실제로 쓸 수 있는 물이에요.</li>
+  <li><b>중력수</b>: 포화~포장용수량, 빨리 빠져 이용 시간이 짧아요. <b>모세관수</b>: 포장용수량~흡습계수, 대부분의 유효수분. <b>흡습수</b>: 흡습계수 이하, 식물이 못 써요.</li>
+  <li>점토가 많을수록 포장용수량도 영구위조점도 높아요. 그래서 식토는 물이 많아 보여도 <b>무효수분</b>도 많아요. 유효수분은 보통 <span class="hl">양토·미사질양토</span>가 가장 많아요.</li>
+  <li><b>일시위조</b>: 한낮에 시들었다가 밤에 회복. <b>영구위조</b>: 물을 줘야만 회복되거나 회복 불가.</li>
+  <li>관수 시기 판단: 포장용수량과 위조점 사이의 절반쯤 썼을 때 주는 게 일반적이에요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>상태</th><th>수분퍼텐셜</th><th>물의 종류</th></tr>
+<tr><td class="hb">포화</td><td>0</td><td>중력수 포함</td></tr>
+<tr><td class="hg">포장용수량</td><td>약 −0.033 MPa</td><td>유효수분 시작</td></tr>
+<tr><td class="hp">영구위조점</td><td>약 −1.5 MPa</td><td>유효수분 끝</td></tr>
+<tr><td class="hl">흡습계수</td><td>약 −3.1 MPa</td><td>흡습수만 남음</td></tr>
+</table></div>
+  </div>
+  <div class="board">
+    <h2>쪽지시험 4문제</h2>
+    <div id="quiz"></div>
+    <p class="foot">시뮬레이션은 이해를 돕기 위한 단순 모델이에요. 실제 수치는 수종·환경·조건에 따라 달라요.</p>
+  </div>
+</div>
+<script>
+/* ---------- 공통 도우미 ---------- */
+const CH={chalk:'#f1efe6',dim:'rgba(241,239,230,.55)',faint:'rgba(241,239,230,.16)',yellow:'#f4d35e',pink:'#f29e9e',
+  blue:'#9ed2f2',green:'#a8e0a0',orange:'#f0a868',brown:'#b0773f',red:'#e2675c',purple:'#c9a0f0'};
+const $=id=>document.getElementById(id);
+function makeCanvas(id, ratio, draw){
+  const cv=$(id), ctx=cv.getContext('2d'); const st={cv,ctx,W:0,H:0,draw};
+  function rs(){ const d=window.devicePixelRatio||1; const w=Math.max(200,cv.parentElement.clientWidth-12);
+    st.W=w; st.H=Math.round(w*(typeof ratio==='function'?ratio():ratio));
+    cv.width=st.W*d; cv.height=st.H*d; cv.style.height=st.H+'px'; ctx.setTransform(d,0,0,d,0,0); if(st.ready&&st.draw) st.draw(); }
+  window.addEventListener('resize',rs); st.resize=rs; rs(); setTimeout(()=>{ st.ready=true; st.draw&&st.draw(); },0);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(rs);
+  return st;
+}
+function txt(ctx,t,x,y,size,color,align,W){
+  if(W) size=Math.min(size, W/15);
+  ctx.font=size+'px "Nanum Pen Script","Noto Sans KR",cursive'; ctx.fillStyle=color||CH.chalk; ctx.textAlign=align||'center'; ctx.fillText(t,x,y);
+}
+function line(ctx,x1,y1,x2,y2,color,w,dash){ ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle=color||CH.chalk; ctx.lineWidth=w||2; ctx.stroke(); ctx.setLineDash([]); }
+function circle(ctx,x,y,r,fill,stroke,w){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=w||2;ctx.stroke();} }
+function rect(ctx,x,y,w,h,fill,stroke,lw){ if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||2;ctx.strokeRect(x,y,w,h);} }
+function arrow(ctx,x1,y1,x2,y2,color,w){ line(ctx,x1,y1,x2,y2,color,w); const a=Math.atan2(y2-y1,x2-x1),s=7+(w||2)*1.5;
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a-0.45),y2-s*Math.sin(a-0.45)); ctx.lineTo(x2-s*Math.cos(a+0.45),y2-s*Math.sin(a+0.45)); ctx.closePath(); ctx.fillStyle=color||CH.chalk; ctx.fill(); }
+function val(id){ const e=$(id); return e.type==='checkbox'? e.checked : +e.value; }
+function onInputs(ids,fn){ ids.forEach(i=>{ const e=$(i); e.addEventListener('input',fn); e.addEventListener('change',fn); }); fn(); }
+function setText(id,t){ const e=$(id); if(e) e.textContent=t; }
+function msg(t,color){ const e=$('msg'); if(e){ e.textContent=t; e.style.color=color||CH.green; } }
+function segButtons(containerId, onPick){ const c=$(containerId); const bs=[...c.querySelectorAll('button')];
+  bs.forEach(b=>b.addEventListener('click',()=>{ bs.forEach(x=>x.classList.remove('on')); b.classList.add('on'); onPick(b.dataset.v,b); })); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function renderQuiz(QS){ const box=$('quiz');
+  QS.forEach((it,k)=>{ const d=document.createElement('div'); d.className='q';
+    d.innerHTML=`<div><b>Q${k+1}.</b> ${it.q}</div><div class="opts"></div><div class="exp">💡 ${it.e}</div>`;
+    const opts=d.querySelector('.opts');
+    it.o.forEach((t,i)=>{ const b=document.createElement('button'); b.textContent=t; b.onclick=()=>{ if(d.classList.contains('done')) return;
+      d.classList.add('done'); b.classList.add(i===it.a?'right':'wrong'); opts.children[it.a].classList.add('right'); }; opts.appendChild(b); });
+    box.appendChild(d); });
+}
+</script>
+<script>
+// 부피 수분함량(%) 대략값
+const TX={sand:{sat:40,fc:10,pwp:4,hc:2,n:'사토'},loam:{sat:50,fc:28,pwp:12,hc:6,n:'양토'},clay:{sat:55,fc:40,pwp:27,hc:16,n:'식토'}};
+let tex='loam', day=0, timer=null;
+const st=makeCanvas('cv',1.05,draw);
+function theta(){ const t=TX[tex]; return t.hc*0.5 + (t.sat-t.hc*0.5)*val('w')/100; }
+function psi(th){ // MPa (음수), 구간 보간: sat 0 → fc -0.033 → pwp -1.5 → hc -3.1
+  const t=TX[tex];
+  const pts=[[t.sat,-0.001],[t.fc,-0.033],[t.pwp,-1.5],[t.hc,-3.1],[t.hc*0.5,-30]];
+  for(let i=0;i<pts.length-1;i++){ const [a,pa]=pts[i],[b,pb]=pts[i+1]; if(th<=a&&th>=b){ const f=(a-th)/(a-b); return -Math.exp(lerp(Math.log(-pa),Math.log(-pb),f)); } }
+  return th>t.sat? -0.001 : -30;
+}
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H); const t=TX[tex], th=theta();
+  // 왼쪽: 흙 기둥
+  const x0=W*0.06, x1=W*0.3, top=H*0.08, bot=H*0.9;
+  const Y=v=>bot-(bot-top)*v/60;
+  rect(ctx,x0,top,x1-x0,bot-top,'rgba(176,119,63,.25)',CH.chalk,2);
+  rect(ctx,x0,Y(th),x1-x0,bot-Y(th),'rgba(158,210,242,.55)');
+  [[t.sat,'포화',CH.blue],[t.fc,'포장용수량',CH.green],[t.pwp,'위조점',CH.pink],[t.hc,'흡습계수',CH.dim]].forEach(([v,n,c])=>{ line(ctx,x0-4,Y(v),x1+6,Y(v),c,2,[5,3]); txt(ctx,n,x1+8,Y(v)+5,15,c,'left',W); });
+  // 구간 이름
+  txt(ctx,'중력수',x0+(x1-x0)/2,(Y(t.sat)+Y(t.fc))/2+5,14,'#1d2e25','center');
+  txt(ctx,'유효수분',x0+(x1-x0)/2,(Y(t.fc)+Y(t.pwp))/2+5,14,'#1d2e25','center');
+  // 오른쪽: 나무
+  const tx=W*0.78, gy=H*0.6;
+  const p=psi(th), wilt = p<-1.5? 1 : p<-0.6? 0.5:0;
+  line(ctx,tx,gy,tx,gy-H*0.28,CH.brown,6);
+  for(const side of [-1,1]){ ctx.beginPath(); const lx=tx+side*W*0.13, ly=gy-H*0.28+wilt*H*0.12; ctx.moveTo(tx,gy-H*0.26); ctx.quadraticCurveTo(tx+side*W*0.08,gy-H*0.36+wilt*H*0.1,lx,ly); ctx.quadraticCurveTo(tx+side*W*0.07,gy-H*0.24+wilt*H*0.08,tx,gy-H*0.26); ctx.fillStyle=wilt>=1?'rgba(200,180,90,.5)':'rgba(168,224,160,.45)'; ctx.fill(); ctx.strokeStyle=CH.chalk; ctx.lineWidth=1.5; ctx.stroke(); }
+  line(ctx,W*0.55,gy,W*0.98,gy,CH.chalk,2);
+  ctx.strokeStyle=CH.chalk; ctx.lineWidth=1.5; for(const dx of [-0.1,0,0.1]){ ctx.beginPath(); ctx.moveTo(tx,gy); ctx.lineTo(tx+dx*W,gy+H*0.15); ctx.stroke(); }
+  if(th>t.fc) for(let i=0;i<4;i++) arrow(ctx,W*(0.6+i*0.1),gy+H*0.17,W*(0.6+i*0.1),gy+H*0.27,CH.blue,2);
+  txt(ctx, th>t.fc?'↓ 중력수가 빠지는 중': wilt>=1?'영구 위조 (회복 안 됨)': wilt>0?'한낮에 살짝 시듦':'물을 잘 먹는 중', W*0.74, H-8, 15, th>t.fc?CH.blue:wilt>=1?CH.pink:CH.green,'center',W);
+}
+function fmtPsi(p){ return p>-0.1? p.toFixed(3)+' MPa' : p.toFixed(2)+' MPa'; }
+function update(){
+  const t=TX[tex], th=theta(), p=psi(th);
+  setText('vW', Math.round(val('w'))+'%'); setText('sW', th.toFixed(1)+'%'); setText('sPsi', fmtPsi(p)); setText('sDay',day);
+  $('tbl').innerHTML=`<tr><th>${t.n}</th><th>수분(%)</th></tr><tr><td>포장용수량 (−0.033 MPa)</td><td>${t.fc}</td></tr><tr><td>영구위조점 (−1.5 MPa)</td><td>${t.pwp}</td></tr><tr><td class="hg">유효수분 = 차이</td><td class="hg">${t.fc-t.pwp}</td></tr>`;
+  if(th>t.fc) msg('포장용수량보다 많아요: 큰 틈의 물(중력수)은 곧 아래로 빠져요','#9ed2f2');
+  else if(th>t.pwp) msg('유효수분 구간: 뿌리가 빨아 먹을 수 있는 물','#a8e0a0');
+  else if(th>t.hc) msg('영구위조점 아래: 물은 있지만 흙이 너무 세게 쥐어 못 먹어요','#f29e9e');
+  else msg('흡습수만 남음: 알갱이 표면에 달라붙은 물, 식물은 절대 못 써요','#f29e9e');
+  draw();
+}
+segButtons('tex',v=>{ tex=v; update(); });
+$('rain').onclick=()=>{ $('w').value=100; day=0; update(); };
+$('play').onclick=()=>{ if(timer){clearInterval(timer);timer=null;return;} $('w').value=100; day=0; timer=setInterval(()=>{ const t=TX[tex]; const th=theta(); const span=t.sat-t.hc*0.5; const drop = th>t.fc? 3.5 : th>t.pwp? 0.9 : 0.25; $('w').value=Math.max(0,val('w')-drop*100/span*0.4); day+= th>t.fc?0.25:0.5; day=Math.round(day*4)/4; update(); if(val('w')<=1){clearInterval(timer);timer=null;} },120); };
+onInputs(['w'],()=>{ update(); });
+</script>
+<script>
+renderQuiz([{"q": "유효수분을 바르게 나타낸 것은?", "o": ["포화 − 포장용수량", "포장용수량 − 영구위조점", "영구위조점 − 흡습계수", "포화 − 흡습계수"], "a": 1, "e": "식물이 이용 가능한 물은 포장용수량과 영구위조점 사이예요."}, {"q": "영구위조점의 수분퍼텐셜은 약 얼마인가?", "o": ["−0.033 MPa", "−0.3 MPa", "−1.5 MPa", "−3.1 MPa"], "a": 2, "e": "약 −1.5 MPa(−15 bar)예요. −0.033은 포장용수량, −3.1은 흡습계수예요."}, {"q": "비 온 뒤 하루 이틀 사이 큰 공극에서 빠져나가는 물은?", "o": ["흡습수", "모세관수", "중력수", "결합수"], "a": 2, "e": "중력수는 포화~포장용수량 사이의 물로, 중력에 의해 아래로 빠져요."}, {"q": "일반적으로 유효수분이 가장 많은 토성은?", "o": ["사토", "양토(미사질양토)", "식토", "자갈토"], "a": 1, "e": "사토는 보수력이 낮고, 식토는 위조점이 높아 무효수분이 많아요. 양토·미사질양토가 유효수분이 가장 많아요."}]);
+</script>
+</body>
+</html>

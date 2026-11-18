@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>흙은 양분을 붙잡는 자석 (양이온교환용량 CEC) · 칠판 시뮬레이션</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--board:#24372d;--board2:#1d2e25;--frame:#6b4a2f;--chalk:#f1efe6;--dim:rgba(241,239,230,.6);
+    --yellow:#f4d35e;--pink:#f29e9e;--blue:#9ed2f2;--green:#a8e0a0;--orange:#f0a868}
+  *{box-sizing:border-box}
+  body{margin:0;background:#2b2118;color:var(--chalk);font-family:"Noto Sans KR",sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:14px}
+  .back{display:inline-block;margin:0 0 10px;color:var(--yellow);text-decoration:none;font-size:.95rem}
+  .board{background:radial-gradient(ellipse at 30% 20%,#2c4436 0%,var(--board) 45%,var(--board2) 100%);
+    border:14px solid var(--frame);border-radius:10px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.5);
+    padding:18px 18px 22px;margin-bottom:18px}
+  h1,h2,h3{font-family:"Nanum Pen Script",cursive;font-weight:400;letter-spacing:.5px}
+  h1{font-size:2.5rem;margin:0 0 6px;line-height:1.15}
+  h1 small{display:block;font-size:1.45rem;color:var(--yellow)}
+  h2{font-size:2rem;margin:4px 0 8px;color:var(--yellow)}
+  h3{font-size:1.5rem;margin:4px 0;color:var(--yellow)}
+  p{margin:6px 0}
+  .lead{color:var(--dim);font-size:.95rem}
+  .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .canvasBox{background:rgba(0,0,0,.12);border:1px dashed rgba(241,239,230,.25);border-radius:8px;padding:6px}
+  canvas{display:block;width:100%;touch-action:manipulation}
+  .msg{font-family:"Nanum Pen Script",cursive;font-size:1.55rem;min-height:2.1rem;color:var(--green);text-align:center;line-height:1.25;margin:6px 0}
+  .stat{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:.9rem;color:var(--dim)}
+  .stat b{color:var(--chalk)}
+  button,.tab{font-family:"Noto Sans KR",sans-serif;font-size:.92rem;background:transparent;color:var(--chalk);
+    border:1.5px solid rgba(241,239,230,.6);border-radius:6px;padding:7px 12px;cursor:pointer}
+  button:hover{background:rgba(241,239,230,.1)}
+  button.on,.tab.on{background:var(--chalk);color:var(--board2);font-weight:700}
+  button.primary{border-color:var(--yellow);color:var(--yellow)}
+  .controls,.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .row{margin:10px 0}
+  .row label{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}
+  .row label b{color:var(--yellow);white-space:nowrap}
+  .row input[type=range]{width:100%;accent-color:var(--yellow)}
+  .row .hint{font-size:.8rem;color:var(--dim)}
+  .num{width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid rgba(241,239,230,.4);background:rgba(0,0,0,.2);color:var(--chalk);font-size:1rem}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:8px;border:1px solid rgba(241,239,230,.18);margin:6px 0;cursor:pointer}
+  .check input{margin-top:5px;width:18px;height:18px;accent-color:var(--yellow)}
+  .check .d{font-size:.84rem;color:var(--dim)}
+  .big{font-family:"Nanum Pen Script",cursive;font-size:2.4rem;color:var(--yellow);line-height:1.1}
+  .note{border-left:3px solid var(--yellow);padding:4px 10px;margin:10px 0;font-size:.92rem}
+  .teacher li{margin:6px 0}
+  .hl{color:var(--yellow)} .hp{color:var(--pink)} .hb{color:var(--blue)} .hg{color:var(--green)} .ho{color:var(--orange)}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;margin-top:8px}
+  td,th{border-bottom:1px dashed rgba(241,239,230,.25);padding:6px 4px;text-align:left;vertical-align:top}
+  th{font-family:"Nanum Pen Script",cursive;font-size:1.3rem;font-weight:400;color:var(--yellow)}
+  .tblwrap{overflow-x:auto}
+  .q{border:1px solid rgba(241,239,230,.2);border-radius:8px;padding:10px 12px;margin:10px 0}
+  .q .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .q .opts button.right{background:rgba(168,224,160,.25);border-color:var(--green)}
+  .q .opts button.wrong{background:rgba(242,158,158,.2);border-color:var(--pink)}
+  .q .exp{display:none;font-size:.9rem;margin-top:8px;color:var(--dim)}
+  .q.done .exp{display:block}
+  .foot{font-size:.8rem;color:var(--dim);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← 시뮬레이션 목록</a>
+  <div class="board">
+    <h1>점토와 부식은 마이너스 자석<small>플러스 양분(양이온)을 붙잡았다 내줬다 — CEC</small></h1>
+    <p class="lead">점토와 부식(썩은 유기물) 알갱이 표면은 <b>마이너스(−) 전기</b>를 띠어요. 그래서 칼슘(Ca²⁺), 마그네슘(Mg²⁺), 칼륨(K⁺) 같은 <b>플러스 양분(양이온)</b>을 자석처럼 붙잡아 두었다가, 뿌리가 필요할 때 바꿔치기(교환)해서 내줘요. 붙잡을 수 있는 자리의 수가 <b>양이온교환용량(CEC)</b>이에요. 자리가 적은 흙은 비료를 줘도 빗물에 씻겨 나가요.</p>
+  </div>
+  <div class="board">
+    <div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>교환 자리: <b id="sN"></b></span><span>염기포화도: <b id="sBS"></b></span><span>대략 pH: <b id="sPH"></b></span><span>씻겨 나간 양분: <b id="sL">0</b></span></div>
+  </div>
+  <div>
+    <h3>흙 알갱이 고르기</h3>
+    <div class="tabs" id="col"><button data-v="sand">모래</button><button data-v="kao">카올리나이트</button><button class="on" data-v="mont">몬모릴로나이트</button><button data-v="hum">부식</button></div>
+    <h3>일어나는 일</h3>
+    <div class="controls"><button id="rain">🌧 산성비 (H⁺)</button><button id="lime">🪨 석회 (Ca²⁺)</button><button id="fert">🧪 칼륨 비료 (K⁺)</button></div>
+    <div class="controls"><button id="reset">↺ 처음부터</button></div>
+    <div class="note">붙잡는 힘 순서: <b>Al³⁺ &gt; H⁺ &gt; Ca²⁺ &gt; Mg²⁺ &gt; K⁺ ≈ NH₄⁺ &gt; Na⁺</b>. 강한 이온이 오면 약한 이온이 밀려나요.</div>
+  </div>
+</div>
+  </div>
+  <div class="board teacher">
+    <h2>선생님 한마디 — 시험에 나오는 것만</h2>
+    <ol>
+  <li><span class="hl">CEC(양이온교환용량)</span>: 흙이 양이온을 붙잡을 수 있는 총량. 단위 <b>cmol(+)/kg</b> (예전 단위 me/100g과 같은 값).</li>
+  <li>CEC 크기: <span class="hl">부식 &gt; 버미큘라이트·몬모릴로나이트 &gt; 일라이트 &gt; 카올리나이트 &gt; 모래</span>. 부식은 약 150~300, 몬모릴로나이트 80~150, 카올리나이트 3~15 정도예요.</li>
+  <li>흡착 세기(치환 순서): <span class="hp">Al³⁺ &gt; H⁺ &gt; Ca²⁺ &gt; Mg²⁺ &gt; K⁺ ≈ NH₄⁺ &gt; Na⁺</span>. 전하가 크고, 수화 반지름이 작을수록 세게 붙어요.</li>
+  <li><span class="hl">염기포화도(%)</span> = (Ca²⁺+Mg²⁺+K⁺+Na⁺) ÷ CEC × 100. 염기포화도가 낮을수록 산성 토양이에요.</li>
+  <li>산성비·강우 → H⁺가 염기를 밀어내 <b>용탈</b> → 토양 산성화 → Al³⁺ 용출 독성. 석회로 Ca²⁺를 공급하면 회복돼요.</li>
+  <li>CEC가 큰 흙은 양분을 오래 지니고 pH 변화에도 잘 버텨요(<b>완충력</b>이 큼). 모래땅엔 유기물을 넣어 CEC를 높여요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>물질</th><th>CEC (cmol/kg)</th><th>비고</th></tr>
+<tr><td class="ho">부식</td><td>약 150~300</td><td>가장 큼, 유기물 투입</td></tr>
+<tr><td class="hb">몬모릴로나이트</td><td>약 80~150</td><td>2:1형, 팽창성</td></tr>
+<tr><td class="hl">카올리나이트</td><td>약 3~15</td><td>1:1형, 우리나라 흙에 많음</td></tr>
+<tr><td>모래</td><td>거의 없음</td><td>양분 보유력 낮음</td></tr>
+</table></div>
+  </div>
+  <div class="board">
+    <h2>쪽지시험 4문제</h2>
+    <div id="quiz"></div>
+    <p class="foot">시뮬레이션은 이해를 돕기 위한 단순 모델이에요. 실제 수치는 수종·환경·조건에 따라 달라요.</p>
+  </div>
+</div>
+<script>
+/* ---------- 공통 도우미 ---------- */
+const CH={chalk:'#f1efe6',dim:'rgba(241,239,230,.55)',faint:'rgba(241,239,230,.16)',yellow:'#f4d35e',pink:'#f29e9e',
+  blue:'#9ed2f2',green:'#a8e0a0',orange:'#f0a868',brown:'#b0773f',red:'#e2675c',purple:'#c9a0f0'};
+const $=id=>document.getElementById(id);
+function makeCanvas(id, ratio, draw){
+  const cv=$(id), ctx=cv.getContext('2d'); const st={cv,ctx,W:0,H:0,draw};
+  function rs(){ const d=window.devicePixelRatio||1; const w=Math.max(200,cv.parentElement.clientWidth-12);
+    st.W=w; st.H=Math.round(w*(typeof ratio==='function'?ratio():ratio));
+    cv.width=st.W*d; cv.height=st.H*d; cv.style.height=st.H+'px'; ctx.setTransform(d,0,0,d,0,0); if(st.ready&&st.draw) st.draw(); }
+  window.addEventListener('resize',rs); st.resize=rs; rs(); setTimeout(()=>{ st.ready=true; st.draw&&st.draw(); },0);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(rs);
+  return st;
+}
+function txt(ctx,t,x,y,size,color,align,W){
+  if(W) size=Math.min(size, W/15);
+  ctx.font=size+'px "Nanum Pen Script","Noto Sans KR",cursive'; ctx.fillStyle=color||CH.chalk; ctx.textAlign=align||'center'; ctx.fillText(t,x,y);
+}
+function line(ctx,x1,y1,x2,y2,color,w,dash){ ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle=color||CH.chalk; ctx.lineWidth=w||2; ctx.stroke(); ctx.setLineDash([]); }
+function circle(ctx,x,y,r,fill,stroke,w){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=w||2;ctx.stroke();} }
+function rect(ctx,x,y,w,h,fill,stroke,lw){ if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||2;ctx.strokeRect(x,y,w,h);} }
+function arrow(ctx,x1,y1,x2,y2,color,w){ line(ctx,x1,y1,x2,y2,color,w); const a=Math.atan2(y2-y1,x2-x1),s=7+(w||2)*1.5;
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a-0.45),y2-s*Math.sin(a-0.45)); ctx.lineTo(x2-s*Math.cos(a+0.45),y2-s*Math.sin(a+0.45)); ctx.closePath(); ctx.fillStyle=color||CH.chalk; ctx.fill(); }
+function val(id){ const e=$(id); return e.type==='checkbox'? e.checked : +e.value; }
+function onInputs(ids,fn){ ids.forEach(i=>{ const e=$(i); e.addEventListener('input',fn); e.addEventListener('change',fn); }); fn(); }
+function setText(id,t){ const e=$(id); if(e) e.textContent=t; }
+function msg(t,color){ const e=$('msg'); if(e){ e.textContent=t; e.style.color=color||CH.green; } }
+function segButtons(containerId, onPick){ const c=$(containerId); const bs=[...c.querySelectorAll('button')];
+  bs.forEach(b=>b.addEventListener('click',()=>{ bs.forEach(x=>x.classList.remove('on')); b.classList.add('on'); onPick(b.dataset.v,b); })); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function renderQuiz(QS){ const box=$('quiz');
+  QS.forEach((it,k)=>{ const d=document.createElement('div'); d.className='q';
+    d.innerHTML=`<div><b>Q${k+1}.</b> ${it.q}</div><div class="opts"></div><div class="exp">💡 ${it.e}</div>`;
+    const opts=d.querySelector('.opts');
+    it.o.forEach((t,i)=>{ const b=document.createElement('button'); b.textContent=t; b.onclick=()=>{ if(d.classList.contains('done')) return;
+      d.classList.add('done'); b.classList.add(i===it.a?'right':'wrong'); opts.children[it.a].classList.add('right'); }; opts.appendChild(b); });
+    box.appendChild(d); });
+}
+</script>
+<script>
+const COLL={sand:{n:4,name:'모래',cec:'거의 0~5'},kao:{n:10,name:'카올리나이트',cec:'3~15'},mont:{n:26,name:'몬모릴로나이트',cec:'80~150'},hum:{n:36,name:'부식',cec:'150~300'}};
+const ION={H:{t:'H⁺',c:CH.pink,s:5},Al:{t:'Al³⁺',c:CH.red,s:6},Ca:{t:'Ca²⁺',c:CH.blue,s:4},Mg:{t:'Mg²⁺',c:CH.green,s:3},K:{t:'K⁺',c:CH.yellow,s:2},Na:{t:'Na⁺',c:CH.chalk,s:1}};
+let coll='mont', sites=[], free=[], leached=0, fall=[];
+const st=makeCanvas('cv',1.0,draw);
+function reset(){ const n=COLL[coll].n; sites=[]; for(let i=0;i<n;i++){ const r=Math.random(); sites.push(r<0.45?'Ca':r<0.65?'Mg':r<0.78?'K':r<0.83?'Na':'H'); } free=[]; leached=0; fall=[]; update(); }
+function bs(){ const b=sites.filter(s=>['Ca','Mg','K','Na'].includes(s)).length; return sites.length? b/sites.length:0; }
+function addIons(type,count){ // 용액에 이온 추가 → 빈 자리/약한 이온과 교환
+  for(let k=0;k<count;k++){
+    let placed=false;
+    // 더 약한 이온과 교환
+    let weakest=-1, ws=99; sites.forEach((s,i)=>{ if(ION[s].s<ws){ws=ION[s].s;weakest=i;} });
+    if(weakest>=0 && ION[type].s>ws && Math.random()<0.75){ const out=sites[weakest]; sites[weakest]=type; fall.push({t:out,x:Math.random(),y:0.55}); if(out!=='H'&&out!=='Al') leached++; placed=true; }
+    if(!placed){ fall.push({t:type,x:Math.random(),y:0.5}); if(type!=='H'&&type!=='Al') leached++; }
+  }
+}
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H*0.36, r=Math.min(W*0.2, 30+COLL[coll].n*2.4);
+  ctx.beginPath(); ctx.ellipse(cx,cy,r*1.3,r*0.75,0,0,Math.PI*2); ctx.fillStyle= coll==='hum'?'rgba(70,50,35,.8)':coll==='sand'?'rgba(230,210,150,.5)':'rgba(176,119,63,.6)'; ctx.fill(); ctx.strokeStyle=CH.chalk; ctx.lineWidth=2; ctx.stroke();
+  txt(ctx,COLL[coll].name,cx,cy+6,20,CH.chalk,'center',W);
+  sites.forEach((s,i)=>{ const a=i/sites.length*Math.PI*2; const x=cx+Math.cos(a)*r*1.3, y=cy+Math.sin(a)*r*0.75;
+    txt(ctx,'−',cx+Math.cos(a)*r*1.12,cy+Math.sin(a)*r*0.62+5,16,CH.chalk,'center');
+    const ox=cx+Math.cos(a)*(r*1.3+18), oy=cy+Math.sin(a)*(r*0.75+14);
+    txt(ctx,ION[s].t,ox,oy+5,15,ION[s].c,'center'); });
+  // 아래로 씻겨 내려가는 이온
+  line(ctx,0,H*0.78,W,H*0.78,CH.faint,1,[4,4]); txt(ctx,'↓ 지하수로 씻겨 나감 (용탈)',W/2,H*0.78+18,16,CH.dim,'center',W);
+  fall.forEach(f=> txt(ctx,ION[f.t].t,W*(0.1+f.x*0.8),H*f.y,15,ION[f.t].c,'center'));
+}
+function tick(){ fall.forEach(f=>f.y+=0.006); fall=fall.filter(f=>f.y<1.05); draw(); requestAnimationFrame(tick); }
+function update(){
+  const b=bs(); setText('sN',sites.length+'개 (CEC '+COLL[coll].cec+')'); setText('sBS',Math.round(b*100)+'%');
+  const ph = 4.3 + b*2.9; setText('sPH',ph.toFixed(1)); setText('sL',leached+'개');
+  const hcount=sites.filter(s=>s==='H'||s==='Al').length;
+  if(coll==='sand') msg('모래는 자리가 거의 없어요. 비료를 줘도 대부분 씻겨 나가요','#f29e9e');
+  else if(b<0.4) msg('H⁺·Al³⁺가 자리를 차지해 산성화! 염기(Ca·Mg·K)가 씻겨 나갔어요','#f29e9e');
+  else if(b>0.85) msg('염기포화도가 높아요. 양분 창고가 꽉 찬 상태','#a8e0a0');
+  else msg('자리가 많을수록 양분을 오래 붙잡아 둬요 (완충력도 커요)','#a8e0a0');
+  draw();
+}
+segButtons('col',v=>{ coll=v; reset(); });
+$('rain').onclick=()=>{ addIons('H',Math.ceil(sites.length*0.3)); if(bs()<0.35) addIons('Al',2); update(); };
+$('lime').onclick=()=>{ addIons('Ca',Math.ceil(sites.length*0.4)); update(); };
+$('fert').onclick=()=>{ for(let k=0;k<8;k++){ const hi=sites.findIndex(s=>s==='H'||s==='Na'); if(hi>=0 && Math.random()<0.6){ fall.push({t:sites[hi],x:Math.random(),y:0.55}); sites[hi]='K'; } else { fall.push({t:'K',x:Math.random(),y:0.5}); leached++; } } update(); };
+$('reset').onclick=reset;
+reset(); requestAnimationFrame(tick);
+</script>
+<script>
+renderQuiz([{"q": "양이온교환용량(CEC)이 가장 큰 것은?", "o": ["모래", "카올리나이트", "몬모릴로나이트", "부식"], "a": 3, "e": "부식(유기물)이 가장 크고, 몬모릴로나이트 > 카올리나이트 > 모래 순이에요."}, {"q": "토양 콜로이드에 흡착되는 힘이 가장 강한 양이온은?", "o": ["Na⁺", "K⁺", "Ca²⁺", "Al³⁺"], "a": 3, "e": "Al³⁺ > H⁺ > Ca²⁺ > Mg²⁺ > K⁺ ≈ NH₄⁺ > Na⁺ 순이에요."}, {"q": "CEC 20, 교환성 염기(Ca+Mg+K+Na) 합이 12 cmol/kg일 때 염기포화도는?", "o": ["40%", "60%", "80%", "12%"], "a": 1, "e": "12 ÷ 20 × 100 = 60%예요."}, {"q": "산성비가 계속될 때 토양에서 일어나는 일로 옳은 것은?", "o": ["염기포화도가 높아진다", "Ca²⁺·Mg²⁺가 용탈되어 산성화된다", "CEC가 크게 늘어난다", "알루미늄 용출이 줄어든다"], "a": 1, "e": "H⁺가 염기를 밀어내 씻겨 나가면서 산성화되고, 심하면 Al³⁺가 녹아 나와요."}]);
+</script>
+</body>
+</html>

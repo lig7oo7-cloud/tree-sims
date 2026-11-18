@@ -1,0 +1,90 @@
+<!--meta
+{"id":"cec","title":"흙은 양분을 붙잡는 자석 (양이온교환용량 CEC)","subject":"나무의사","unit":"토양학 · 화학성","summary":"모래·카올리나이트·몬모릴로나이트·부식을 바꾸고 비·석회·비료를 줘 보며 양이온 교환, 용탈, 염기포화도를 보는 실험","added":"2026-11-19","headline":"점토와 부식은 마이너스 자석","sub":"플러스 양분(양이온)을 붙잡았다 내줬다 — CEC"}
+-->
+<!--@intro-->
+<p class="lead">점토와 부식(썩은 유기물) 알갱이 표면은 <b>마이너스(−) 전기</b>를 띠어요. 그래서 칼슘(Ca²⁺), 마그네슘(Mg²⁺), 칼륨(K⁺) 같은 <b>플러스 양분(양이온)</b>을 자석처럼 붙잡아 두었다가, 뿌리가 필요할 때 바꿔치기(교환)해서 내줘요. 붙잡을 수 있는 자리의 수가 <b>양이온교환용량(CEC)</b>이에요. 자리가 적은 흙은 비료를 줘도 빗물에 씻겨 나가요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>교환 자리: <b id="sN"></b></span><span>염기포화도: <b id="sBS"></b></span><span>대략 pH: <b id="sPH"></b></span><span>씻겨 나간 양분: <b id="sL">0</b></span></div>
+  </div>
+  <div>
+    <h3>흙 알갱이 고르기</h3>
+    <div class="tabs" id="col"><button data-v="sand">모래</button><button data-v="kao">카올리나이트</button><button class="on" data-v="mont">몬모릴로나이트</button><button data-v="hum">부식</button></div>
+    <h3>일어나는 일</h3>
+    <div class="controls"><button id="rain">🌧 산성비 (H⁺)</button><button id="lime">🪨 석회 (Ca²⁺)</button><button id="fert">🧪 칼륨 비료 (K⁺)</button></div>
+    <div class="controls"><button id="reset">↺ 처음부터</button></div>
+    <div class="note">붙잡는 힘 순서: <b>Al³⁺ &gt; H⁺ &gt; Ca²⁺ &gt; Mg²⁺ &gt; K⁺ ≈ NH₄⁺ &gt; Na⁺</b>. 강한 이온이 오면 약한 이온이 밀려나요.</div>
+  </div>
+</div>
+<!--@js-->
+const COLL={sand:{n:4,name:'모래',cec:'거의 0~5'},kao:{n:10,name:'카올리나이트',cec:'3~15'},mont:{n:26,name:'몬모릴로나이트',cec:'80~150'},hum:{n:36,name:'부식',cec:'150~300'}};
+const ION={H:{t:'H⁺',c:CH.pink,s:5},Al:{t:'Al³⁺',c:CH.red,s:6},Ca:{t:'Ca²⁺',c:CH.blue,s:4},Mg:{t:'Mg²⁺',c:CH.green,s:3},K:{t:'K⁺',c:CH.yellow,s:2},Na:{t:'Na⁺',c:CH.chalk,s:1}};
+let coll='mont', sites=[], free=[], leached=0, fall=[];
+const st=makeCanvas('cv',1.0,draw);
+function reset(){ const n=COLL[coll].n; sites=[]; for(let i=0;i<n;i++){ const r=Math.random(); sites.push(r<0.45?'Ca':r<0.65?'Mg':r<0.78?'K':r<0.83?'Na':'H'); } free=[]; leached=0; fall=[]; update(); }
+function bs(){ const b=sites.filter(s=>['Ca','Mg','K','Na'].includes(s)).length; return sites.length? b/sites.length:0; }
+function addIons(type,count){ // 용액에 이온 추가 → 빈 자리/약한 이온과 교환
+  for(let k=0;k<count;k++){
+    let placed=false;
+    // 더 약한 이온과 교환
+    let weakest=-1, ws=99; sites.forEach((s,i)=>{ if(ION[s].s<ws){ws=ION[s].s;weakest=i;} });
+    if(weakest>=0 && ION[type].s>ws && Math.random()<0.75){ const out=sites[weakest]; sites[weakest]=type; fall.push({t:out,x:Math.random(),y:0.55}); if(out!=='H'&&out!=='Al') leached++; placed=true; }
+    if(!placed){ fall.push({t:type,x:Math.random(),y:0.5}); if(type!=='H'&&type!=='Al') leached++; }
+  }
+}
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H*0.36, r=Math.min(W*0.2, 30+COLL[coll].n*2.4);
+  ctx.beginPath(); ctx.ellipse(cx,cy,r*1.3,r*0.75,0,0,Math.PI*2); ctx.fillStyle= coll==='hum'?'rgba(70,50,35,.8)':coll==='sand'?'rgba(230,210,150,.5)':'rgba(176,119,63,.6)'; ctx.fill(); ctx.strokeStyle=CH.chalk; ctx.lineWidth=2; ctx.stroke();
+  txt(ctx,COLL[coll].name,cx,cy+6,20,CH.chalk,'center',W);
+  sites.forEach((s,i)=>{ const a=i/sites.length*Math.PI*2; const x=cx+Math.cos(a)*r*1.3, y=cy+Math.sin(a)*r*0.75;
+    txt(ctx,'−',cx+Math.cos(a)*r*1.12,cy+Math.sin(a)*r*0.62+5,16,CH.chalk,'center');
+    const ox=cx+Math.cos(a)*(r*1.3+18), oy=cy+Math.sin(a)*(r*0.75+14);
+    txt(ctx,ION[s].t,ox,oy+5,15,ION[s].c,'center'); });
+  // 아래로 씻겨 내려가는 이온
+  line(ctx,0,H*0.78,W,H*0.78,CH.faint,1,[4,4]); txt(ctx,'↓ 지하수로 씻겨 나감 (용탈)',W/2,H*0.78+18,16,CH.dim,'center',W);
+  fall.forEach(f=> txt(ctx,ION[f.t].t,W*(0.1+f.x*0.8),H*f.y,15,ION[f.t].c,'center'));
+}
+function tick(){ fall.forEach(f=>f.y+=0.006); fall=fall.filter(f=>f.y<1.05); draw(); requestAnimationFrame(tick); }
+function update(){
+  const b=bs(); setText('sN',sites.length+'개 (CEC '+COLL[coll].cec+')'); setText('sBS',Math.round(b*100)+'%');
+  const ph = 4.3 + b*2.9; setText('sPH',ph.toFixed(1)); setText('sL',leached+'개');
+  const hcount=sites.filter(s=>s==='H'||s==='Al').length;
+  if(coll==='sand') msg('모래는 자리가 거의 없어요. 비료를 줘도 대부분 씻겨 나가요','#f29e9e');
+  else if(b<0.4) msg('H⁺·Al³⁺가 자리를 차지해 산성화! 염기(Ca·Mg·K)가 씻겨 나갔어요','#f29e9e');
+  else if(b>0.85) msg('염기포화도가 높아요. 양분 창고가 꽉 찬 상태','#a8e0a0');
+  else msg('자리가 많을수록 양분을 오래 붙잡아 둬요 (완충력도 커요)','#a8e0a0');
+  draw();
+}
+segButtons('col',v=>{ coll=v; reset(); });
+$('rain').onclick=()=>{ addIons('H',Math.ceil(sites.length*0.3)); if(bs()<0.35) addIons('Al',2); update(); };
+$('lime').onclick=()=>{ addIons('Ca',Math.ceil(sites.length*0.4)); update(); };
+$('fert').onclick=()=>{ for(let k=0;k<8;k++){ const hi=sites.findIndex(s=>s==='H'||s==='Na'); if(hi>=0 && Math.random()<0.6){ fall.push({t:sites[hi],x:Math.random(),y:0.55}); sites[hi]='K'; } else { fall.push({t:'K',x:Math.random(),y:0.5}); leached++; } } update(); };
+$('reset').onclick=reset;
+reset(); requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">CEC(양이온교환용량)</span>: 흙이 양이온을 붙잡을 수 있는 총량. 단위 <b>cmol(+)/kg</b> (예전 단위 me/100g과 같은 값).</li>
+  <li>CEC 크기: <span class="hl">부식 &gt; 버미큘라이트·몬모릴로나이트 &gt; 일라이트 &gt; 카올리나이트 &gt; 모래</span>. 부식은 약 150~300, 몬모릴로나이트 80~150, 카올리나이트 3~15 정도예요.</li>
+  <li>흡착 세기(치환 순서): <span class="hp">Al³⁺ &gt; H⁺ &gt; Ca²⁺ &gt; Mg²⁺ &gt; K⁺ ≈ NH₄⁺ &gt; Na⁺</span>. 전하가 크고, 수화 반지름이 작을수록 세게 붙어요.</li>
+  <li><span class="hl">염기포화도(%)</span> = (Ca²⁺+Mg²⁺+K⁺+Na⁺) ÷ CEC × 100. 염기포화도가 낮을수록 산성 토양이에요.</li>
+  <li>산성비·강우 → H⁺가 염기를 밀어내 <b>용탈</b> → 토양 산성화 → Al³⁺ 용출 독성. 석회로 Ca²⁺를 공급하면 회복돼요.</li>
+  <li>CEC가 큰 흙은 양분을 오래 지니고 pH 변화에도 잘 버텨요(<b>완충력</b>이 큼). 모래땅엔 유기물을 넣어 CEC를 높여요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>물질</th><th>CEC (cmol/kg)</th><th>비고</th></tr>
+<tr><td class="ho">부식</td><td>약 150~300</td><td>가장 큼, 유기물 투입</td></tr>
+<tr><td class="hb">몬모릴로나이트</td><td>약 80~150</td><td>2:1형, 팽창성</td></tr>
+<tr><td class="hl">카올리나이트</td><td>약 3~15</td><td>1:1형, 우리나라 흙에 많음</td></tr>
+<tr><td>모래</td><td>거의 없음</td><td>양분 보유력 낮음</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"양이온교환용량(CEC)이 가장 큰 것은?","o":["모래","카올리나이트","몬모릴로나이트","부식"],"a":3,"e":"부식(유기물)이 가장 크고, 몬모릴로나이트 > 카올리나이트 > 모래 순이에요."},
+{"q":"토양 콜로이드에 흡착되는 힘이 가장 강한 양이온은?","o":["Na⁺","K⁺","Ca²⁺","Al³⁺"],"a":3,"e":"Al³⁺ > H⁺ > Ca²⁺ > Mg²⁺ > K⁺ ≈ NH₄⁺ > Na⁺ 순이에요."},
+{"q":"CEC 20, 교환성 염기(Ca+Mg+K+Na) 합이 12 cmol/kg일 때 염기포화도는?","o":["40%","60%","80%","12%"],"a":1,"e":"12 ÷ 20 × 100 = 60%예요."},
+{"q":"산성비가 계속될 때 토양에서 일어나는 일로 옳은 것은?","o":["염기포화도가 높아진다","Ca²⁺·Mg²⁺가 용탈되어 산성화된다","CEC가 크게 늘어난다","알루미늄 용출이 줄어든다"],"a":1,"e":"H⁺가 염기를 밀어내 씻겨 나가면서 산성화되고, 심하면 Al³⁺가 녹아 나와요."}
+]

@@ -1,0 +1,95 @@
+<!--meta
+{"id":"compaction","title":"밟힌 흙에서는 뿌리가 숨을 못 쉰다 (토양 답압과 공극)","subject":"나무의사","unit":"토양학 · 수목관리","summary":"사람·차량 통행으로 용적밀도를 높이고 멀칭·천공으로 되살리며 공극률, 산소, 뿌리 깊이 변화를 보는 실험","added":"2026-11-19","headline":"나무 밑을 밟는 건 뿌리의 코를 막는 것","sub":"답압 — 용적밀도가 오르면 공극이 사라진다"}
+-->
+<!--@intro-->
+<p class="lead">흙의 절반쯤은 원래 빈틈(<b>공극</b>)이에요. 큰 틈에는 공기가, 작은 틈에는 물이 들어가고, 뿌리는 이 틈으로 숨 쉬고 파고들어요. 그런데 사람과 차가 계속 밟고 지나가면 흙 알갱이가 꽉 눌려 틈이 사라져요. 이걸 <b>답압</b>이라고 해요. 같은 부피에 흙이 더 빽빽해지니 <b>용적밀도</b>(흙 1cm³의 무게)가 올라가요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>용적밀도: <b id="sBD"></b></span><span>공극률: <b id="sP"></b></span><span>뿌리 깊이: <b id="sR"></b></span></div>
+  </div>
+  <div>
+    <h3>흙 종류</h3>
+    <div class="tabs" id="tex"><button data-v="sand">사질토</button><button class="on" data-v="loam">양토</button><button data-v="clay">식질토</button></div>
+    <h3>밟기</h3>
+    <div class="controls"><button id="walk">🚶 사람 통행 (+)</button><button id="car">🚗 차량·공사 (++)</button></div>
+    <h3>되살리기</h3>
+    <div class="controls"><button id="mulch">🍂 멀칭 5~10cm</button><button id="air">🕳 천공·에어스페이드 + 유기물</button><button id="fence">🚧 출입 제한</button></div>
+    <div class="controls"><button id="reset">↺ 처음부터</button></div>
+  </div>
+</div>
+<!--@js-->
+const TX={sand:{ideal:1.60,restrict:1.80,base:1.45,n:'사질토'},loam:{ideal:1.40,restrict:1.75,base:1.25,n:'양토'},clay:{ideal:1.10,restrict:1.50,base:1.05,n:'식질토'}};
+let tex='loam', bd=1.25, fenced=false, mulched=false, rootD=0.8, grains=[];
+const st=makeCanvas('cv',1.05,draw);
+function seed(){ grains=[]; for(let i=0;i<120;i++) grains.push({x:Math.random(),y:Math.random(),r:0.012+Math.random()*0.018}); }
+function por(){ return 1-bd/2.65; }
+function rootTarget(){ const t=TX[tex]; return clamp(1-(bd-t.ideal)/(t.restrict-t.ideal),0.08,1)*0.85+0.05; }
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const g0=H*0.22, depth=H*0.72;
+  // 하늘/지표
+  line(ctx,0,g0,W,g0,CH.chalk,2);
+  if(mulched){ rect(ctx,0,g0-10,W,10,'rgba(176,119,63,.7)'); txt(ctx,'멀칭',W*0.85,g0-14,16,CH.orange,'center',W); }
+  if(fenced){ for(let x=W*0.08;x<W;x+=W*0.12){ line(ctx,x,g0-28,x,g0,CH.yellow,2);} line(ctx,W*0.06,g0-22,W*0.98,g0-22,CH.yellow,2); }
+  // 나무 줄기
+  rect(ctx,W*0.46,g0-H*0.16,W*0.08,H*0.16,'rgba(176,119,63,.6)',CH.chalk,2);
+  ctx.save(); ctx.beginPath(); ctx.rect(0,g0,W,depth+H*0.02); ctx.clip();
+  // 흙 알갱이 (압축 정도에 따라 간격 축소)
+  const comp = clamp((bd-0.9)/1.0,0,1);
+  const sq = 1-comp*0.45;
+  grains.forEach(gr=>{ const x=W*(0.5+(gr.x-0.5)*1.05), y=g0+depth*(gr.y*sq + (1-sq)*0); const r=gr.r*W*(0.9+comp*0.4);
+    circle(ctx,x,y,r,'rgba(176,119,63,.55)','rgba(241,239,230,.25)',1); });
+  // 다져진 층
+  if(comp>0.35){ rect(ctx,0,g0,W,depth*0.25*comp,'rgba(120,80,40,.35)'); txt(ctx,'다져진 층',W*0.06,g0+18,16,CH.pink,'left',W); }
+  ctx.restore();
+  // 뿌리
+  const rd=g0+depth*rootD;
+  ctx.strokeStyle=CH.green; ctx.lineWidth=3;
+  for(const dx of [-0.32,-0.18,-0.06,0.06,0.18,0.32]){ ctx.beginPath(); ctx.moveTo(W*0.5,g0+4); const endY = rd*(0.75+Math.abs(dx)*0.4); ctx.quadraticCurveTo(W*(0.5+dx*0.5),g0+(endY-g0)*0.5,W*(0.5+dx),Math.min(endY,g0+depth)); ctx.stroke(); }
+  // 공기 방울 표시 (공극)
+  const p=por(), airFrac=clamp((p-0.33)/0.2,0,1);
+  for(let i=0;i<Math.round(airFrac*14);i++){ const x=W*(0.1+((i*37)%80)/100), y=g0+depth*(0.1+((i*53)%70)/100); circle(ctx,x,y,4,null,CH.blue,1.5); }
+  txt(ctx,'○ = 공기가 드나드는 큰 틈',W/2,H-6,16,CH.blue,'center',W);
+}
+function tick(){ rootD += (rootTarget()-rootD)*0.04; setText('sR', Math.round(rootD*60)+' cm'); draw(); requestAnimationFrame(tick); }
+function update(){
+  const t=TX[tex]; bd=clamp(bd,0.9,1.95);
+  setText('sBD',bd.toFixed(2)+' g/cm³'); setText('sP',Math.round(por()*100)+'%');
+  if(bd>=t.restrict) msg(`${t.n} 기준 ${t.restrict} 이상: 뿌리가 거의 못 뚫고 산소도 부족해요`,'#f29e9e');
+  else if(bd>t.ideal) msg(`${t.n} 적정치(${t.ideal} 이하)를 넘었어요. 뿌리 생장이 줄기 시작`,'#f4d35e');
+  else msg('공극이 넉넉해요. 공기·물·뿌리가 잘 드나들어요','#a8e0a0');
+}
+function press(d){ bd+= fenced? d*0.2 : d; if(mulched) bd-=d*0.4; update(); }
+segButtons('tex',v=>{ tex=v; bd=TX[v].base; update(); });
+$('walk').onclick=()=>press(0.08);
+$('car').onclick=()=>press(0.18);
+$('mulch').onclick=()=>{ mulched=true; bd-=0.04; update(); };
+$('air').onclick=()=>{ bd-=0.15; update(); };
+$('fence').onclick=()=>{ fenced=true; update(); };
+$('reset').onclick=()=>{ fenced=false; mulched=false; bd=TX[tex].base; update(); };
+seed(); update(); requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">용적밀도</span> = 마른 흙 무게 ÷ 전체 부피(공극 포함). <span class="hl">공극률(%)</span> = (1 − 용적밀도 ÷ 입자밀도) × 100. 입자밀도는 보통 <b>2.65 g/cm³</b>로 계산해요.</li>
+  <li>답압되면 <b>대공극(공기 통로)</b>이 먼저 사라져 → 통기·배수 불량, 산소 부족, 뿌리 침투 저항 증가 → 뿌리가 얕게 퍼지고 가뭄·바람에 약해져요.</li>
+  <li>뿌리 생장을 막는 용적밀도는 토성마다 달라요. 대략 <span class="hl">사질토 1.8</span>, <span class="hb">양토 1.7</span> 안팎, <span class="hp">식질토 1.5</span> 이상이면 심각해요(식질토가 더 낮은 값에서 문제).</li>
+  <li>증상: 잎이 작아지고, 수관 위쪽 가지부터 말라 죽어요(정단부 고사). 뿌리가 지표 가까이 몰리고 물 고임이 생겨요.</li>
+  <li>대책: <span class="hg">출입 제한(보호 울타리)</span>, <span class="hg">유기물 멀칭 5~10cm</span>(줄기에 붙이지 않기 — 화산형 멀칭 금지), <span class="hg">토양 천공·에어스페이드 + 유기물 혼합</span>, 수직 멀칭.</li>
+  <li>공사 때는 <b>수관 투영 범위(뿌리 보호 구역)</b> 안에 차량·자재를 두지 않는 게 기본이에요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>토성</th><th>적정 용적밀도</th><th>뿌리 생장 제한</th></tr>
+<tr><td class="hl">사질토</td><td>1.6 미만</td><td>약 1.8 이상</td></tr>
+<tr><td class="hb">양토·미사질</td><td>1.4 미만</td><td>약 1.75 이상</td></tr>
+<tr><td class="hp">식질토</td><td>1.1 미만</td><td>약 1.5 이상</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"용적밀도가 1.325 g/cm³인 흙의 공극률은? (입자밀도 2.65)","o":["25%","40%","50%","60%"],"a":2,"e":"공극률 = (1 − 1.325 ÷ 2.65) × 100 = 50%예요."},
+{"q":"토양 답압의 영향으로 틀린 것은?","o":["대공극이 줄어든다","통기가 나빠진다","용적밀도가 낮아진다","뿌리 침투 저항이 커진다"],"a":2,"e":"답압되면 같은 부피에 흙이 더 많이 들어가 용적밀도가 높아져요."},
+{"q":"답압 토양 개선 방법으로 알맞지 않은 것은?","o":["출입 제한","유기물 멀칭","토양 천공 후 유기물 혼합","줄기에 닿도록 두껍게 쌓는 화산형 멀칭"],"a":3,"e":"줄기에 붙여 두껍게 쌓으면 수피가 습해져 부패·병해가 생겨요. 멀칭은 5~10cm로 줄기에서 띄워요."},
+{"q":"같은 용적밀도에서 뿌리 생장 제한이 가장 먼저 나타나는 토성은?","o":["사질토","양토","식질토","모두 같다"],"a":2,"e":"식질토는 공극이 원래 작아 더 낮은 용적밀도(약 1.5)에서도 뿌리 생장이 막혀요."}
+]

@@ -1,0 +1,92 @@
+<!--meta
+{"id":"soil-ph","title":"흙의 신맛이 양분 문을 여닫는다 (토양 pH와 양분 유효도)","subject":"나무의사","unit":"토양학 · 화학성","summary":"pH를 바꾸며 질소·인·칼륨부터 철·망간·몰리브덴까지 양분 유효도가 어떻게 달라지는지, 석회·황 시용 효과를 보는 실험","added":"2026-11-19","headline":"흙 속 양분이 많아도 못 먹을 수 있다","sub":"pH가 양분의 자물쇠 — 토양 pH와 양분 유효도"}
+-->
+<!--@intro-->
+<p class="lead">흙에 철이 잔뜩 있어도 알칼리성 흙에서는 철쭉 잎이 노랗게 변해요(철 결핍 황화). 철이 물에 안 녹는 형태로 잠겨 버려 뿌리가 못 먹기 때문이에요. 흙의 신맛·쓴맛 정도(<b>pH</b>)는 양분마다 다른 자물쇠예요. 대부분의 양분 문이 가장 많이 열리는 건 <b>pH 6~7 근처의 약산성~중성</b>이에요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div>
+    <div class="row"><label>토양 pH <b id="vP"></b></label><input type="range" id="ph" min="40" max="90" value="52"><div class="hint">우리나라 산림토양은 대체로 pH 4.5~5.5의 산성이에요.</div></div>
+    <div class="controls"><button id="lime">🪨 석회 시용 (+0.5)</button><button id="sulf">🟡 황 시용 (−0.5)</button></div>
+    <h3>이 pH에서 키우면?</h3>
+    <div class="tblwrap"><table id="trees"></table></div>
+  </div>
+</div>
+<!--@js-->
+const PTS=[4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9];
+const NU=[
+ ['질소 N',[.35,.45,.6,.8,1,1,1,1,.9,.75,.6],CH.green],
+ ['인 P',[.2,.3,.45,.7,.95,1,.9,.65,.4,.35,.4],CH.orange],
+ ['칼륨 K',[.45,.55,.7,.85,1,1,1,1,1,.95,.9],CH.yellow],
+ ['황 S',[.45,.55,.7,.85,1,1,1,1,1,1,1],CH.yellow],
+ ['칼슘 Ca',[.25,.35,.5,.65,.8,.9,1,1,1,.9,.8],CH.blue],
+ ['마그네슘 Mg',[.25,.35,.5,.65,.8,.9,1,1,1,.9,.8],CH.blue],
+ ['철 Fe',[1,1,1,.95,.85,.7,.5,.35,.2,.15,.1],CH.pink],
+ ['망간 Mn',[1,1,1,.95,.85,.65,.45,.3,.2,.15,.1],CH.pink],
+ ['아연 Zn',[.9,.95,1,1,1,.9,.7,.5,.35,.3,.25],CH.purple],
+ ['구리 Cu',[.9,.95,1,1,1,.9,.75,.55,.4,.35,.3],CH.purple],
+ ['붕소 B',[.6,.75,.9,1,1,1,.9,.6,.45,.4,.45],CH.green],
+ ['몰리브덴 Mo',[.2,.3,.4,.55,.7,.85,1,1,1,1,1],CH.orange]];
+const TREES=[['진달래·철쭉',4.5,5.5],['소나무',4.5,6.0],['대부분 활엽수',5.5,6.8],['사과나무',5.5,6.5],['회양목·측백',6.0,7.5]];
+function av(arr,p){ const i=clamp(Math.floor((p-4)/0.5),0,9); const t=(p-PTS[i])/0.5; return lerp(arr[i],arr[i+1],clamp(t,0,1)); }
+const al=p=> p<5.5? clamp((5.5-p)/1.0,0,1):0;
+const st=makeCanvas('cv',1.25,draw);
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H);
+  const p=val('ph')/10, L=W*0.31, R=W*0.97, top=H*0.07, rowH=(H*0.84)/(NU.length+1);
+  const X=v=>L+(R-L)*(v-4)/5;
+  for(let v=4;v<=9;v++){ line(ctx,X(v),top,X(v),top+rowH*(NU.length+1),CH.faint,1); txt(ctx,String(v),X(v),top+rowH*(NU.length+1)+16,15,CH.dim,'center',W); }
+  rect(ctx,X(6),top,X(7)-X(6),rowH*(NU.length+1),'rgba(168,224,160,.07)');
+  NU.forEach(([n,arr,c],i)=>{
+    const cy=top+rowH*(i+0.5);
+    ctx.beginPath(); for(let q=4;q<=9.001;q+=0.05){ const h=av(arr,q)*rowH*0.42; ctx.lineTo(X(q),cy-h);} for(let q=9;q>=3.999;q-=0.05){ const h=av(arr,q)*rowH*0.42; ctx.lineTo(X(q),cy+h);} ctx.closePath();
+    ctx.fillStyle=c; ctx.globalAlpha=0.55; ctx.fill(); ctx.globalAlpha=1;
+    const a=av(arr,p); txt(ctx,n,L-6,cy+5,15,a<0.45?CH.pink:CH.chalk,'right',W);
+  });
+  const ay=top+rowH*(NU.length+0.5);
+  ctx.beginPath(); for(let q=4;q<=5.5;q+=0.05){ ctx.lineTo(X(q),ay-al(q)*rowH*0.42);} for(let q=5.5;q>=4;q-=0.05){ ctx.lineTo(X(q),ay+al(q)*rowH*0.42);} ctx.closePath(); ctx.fillStyle=CH.red; ctx.globalAlpha=.7; ctx.fill(); ctx.globalAlpha=1;
+  txt(ctx,'Al 독성',L-6,ay+5,15,CH.red,'right',W);
+  line(ctx,X(p),top-4,X(p),top+rowH*(NU.length+1),CH.yellow,2.5,[6,4]);
+  txt(ctx,'pH '+p.toFixed(1),X(p),top-8+4,17,CH.yellow,X(p)>W*0.85?'right':'center',W);
+  txt(ctx,'띠가 두꺼울수록 뿌리가 먹기 쉬워요',W/2,H-4,16,CH.dim,'center',W);
+}
+function update(){
+  const p=val('ph')/10;
+  setText('vP',p.toFixed(1)+(p<5?' (강산성)':p<6?' (산성)':p<7?' (약산성)':p<7.5?' (중성)':' (알칼리성)'));
+  const low=NU.filter(([n,arr])=>av(arr,p)<0.6).map(x=>x[0].split(' ')[0]);
+  if(p<5) msg('강산성: 알루미늄이 녹아나 뿌리 독성, 칼슘·마그네슘·인 부족. 석회가 필요해요','#f29e9e');
+  else if(p>7.5) msg('알칼리성: 철·망간·아연이 잠겨요 → 잎맥 사이 황화(철 결핍) 위험','#f4d35e');
+  else if(p>=6&&p<=7) msg('대부분의 양분 문이 열린 구간 (pH 6~7)','#a8e0a0');
+  else msg(low.length? '부족해지기 쉬운 양분: '+low.join(', ') : '양분 이용이 무난한 구간','#a8e0a0');
+  $('trees').innerHTML='<tr><th>수종</th><th>적정 pH</th><th>판정</th></tr>'+TREES.map(([n,a,b])=>`<tr><td>${n}</td><td>${a}~${b}</td><td class="${p>=a&&p<=b?'hg':'hp'}">${p>=a&&p<=b?'적합':p<a?'너무 산성':'너무 알칼리'}</td></tr>`).join('');
+  draw();
+}
+$('lime').onclick=()=>{ $('ph').value=clamp(val('ph')+5,40,90); update(); };
+$('sulf').onclick=()=>{ $('ph').value=clamp(val('ph')-5,40,90); update(); };
+onInputs(['ph'],update);
+<!--@teacher-->
+<ol>
+  <li>대부분의 양분은 <span class="hg">pH 6~7(약산성~중성)</span>에서 가장 잘 이용돼요. 많은 수목은 pH 5.5~6.5 정도를 좋아해요.</li>
+  <li><span class="hp">산성(pH 5.5 이하)</span>: 알루미늄(Al³⁺)·망간이 녹아나와 뿌리에 독성, <b>칼슘·마그네슘·칼륨이 빗물에 씻겨 부족</b>, 인은 철·알루미늄과 결합해 고정돼요. 몰리브덴도 부족해져요.</li>
+  <li><span class="hl">알칼리성(pH 7.5 이상)</span>: <b>철·망간·아연·구리·붕소</b>가 부족해져요 → 철 결핍은 <b>어린 잎의 잎맥 사이 황화</b>로 나타나요(철은 체내 이동성이 낮아서). 인은 칼슘과 결합해 고정돼요.</li>
+  <li><b>인(P)</b>은 산성에서도 알칼리성에서도 고정되는, pH에 가장 까다로운 양분이에요(최적 약 6~7).</li>
+  <li>교정: 산성 흙은 <span class="hb">석회(탄산칼슘·고토석회)</span>로 pH를 올리고, 알칼리 흙은 <span class="hl">황</span>이나 산성 유기물(피트모스)로 낮춰요.</li>
+  <li>산성을 좋아하는 수종: 진달래·철쭉류(진달래과), 블루베리. 소나무도 산성 토양을 잘 견뎌요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>pH</th><th>부족해지기 쉬움</th><th>과잉·독성</th></tr>
+<tr><td class="hp">강산성 &lt;5.0</td><td>Ca, Mg, K, P, Mo</td><td>Al, Mn</td></tr>
+<tr><td class="hg">6.0~7.0</td><td>대체로 없음</td><td>-</td></tr>
+<tr><td class="hl">알칼리 &gt;7.5</td><td>Fe, Mn, Zn, Cu, B, P</td><td>(Na 많으면 염해)</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"알칼리성 토양에서 철쭉 어린잎의 잎맥 사이가 노래지는 원인은?","o":["질소 과잉","철 결핍","칼슘 결핍","알루미늄 독성"],"a":1,"e":"알칼리성에서는 철이 불용화돼 흡수가 어려워지고, 철은 체내 이동성이 낮아 어린 잎부터 잎맥 사이 황화가 나타나요."},
+{"q":"강산성 토양에서 뿌리에 독성을 일으키는 대표 원소는?","o":["알루미늄","칼슘","몰리브덴","칼륨"],"a":0,"e":"pH 5.5 이하에서 알루미늄이 녹아나와 뿌리 생장을 해쳐요."},
+{"q":"pH가 너무 낮아도, 너무 높아도 고정되어 유효도가 떨어지는 대표 양분은?","o":["질소","인","황","칼륨"],"a":1,"e":"인은 산성에서는 철·알루미늄, 알칼리성에서는 칼슘과 결합해 고정돼요."},
+{"q":"산성 토양의 pH를 올리는 데 쓰는 자재는?","o":["황","피트모스","석회","황산암모늄"],"a":2,"e":"석회(탄산칼슘, 고토석회)를 쓰면 pH가 올라가요. 나머지는 산성화시키는 쪽이에요."}
+]
