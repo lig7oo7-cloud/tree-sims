@@ -1,0 +1,92 @@
+<!--meta
+{"id":"hollow-tree","title":"속이 빈 나무는 언제 위험할까 (공동 나무 위험도 t/R)","subject":"나무의사","unit":"수목관리 · 위험목 평가","summary":"줄기 지름·공동 크기·개구부를 바꾸며 잔존벽 비율(t/R)과 강도 손실, 바람에 부러질 위험을 판정하는 실험","added":"2026-11-19","headline":"파이프는 속이 비어도 튼튼하다, 벽이 충분하면","sub":"잔존 건전부 두께 비율 t/R — 공동 나무 위험도 평가"}
+-->
+<!--@intro-->
+<p class="lead">속이 썩어 빈 나무는 무조건 위험할까요? 아니에요. 자전거 프레임이 속 빈 파이프인데도 튼튼한 것처럼, 줄기의 힘은 대부분 <b>바깥쪽</b>이 버텨요. 그래서 중요한 건 공동의 크기가 아니라 <b>남아 있는 건강한 벽의 두께(t)</b>가 줄기 반지름(R)의 몇 %냐예요. 벽이 너무 얇아지거나 옆이 뚫려(개구부) 파이프가 C자 모양이 되면 갑자기 약해져요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div>
+    <div class="row"><label>줄기 지름 D <b id="vD"></b></label><input type="range" id="D" min="30" max="150" value="80"></div>
+    <div class="row"><label>공동(빈 곳) 지름 d <b id="vd"></b></label><input type="range" id="d" min="0" max="95" value="50"><div class="hint">줄기 지름에 대한 비율(%)</div></div>
+    <label class="check"><input type="checkbox" id="open"><div><b class="hp">개구부 있음</b><div class="d">공동이 줄기 바깥으로 뚫려 있음 (C자 단면)</div></div></label>
+    <div class="row"><label>바람 세기 <b id="vWd"></b></label><input type="range" id="wind" min="0" max="100" value="40"></div>
+    <div class="tblwrap"><table>
+      <tr><td>잔존벽 두께 t</td><td id="sT"></td></tr>
+      <tr><td>잔존벽 비율 t/R</td><td class="hl" id="sTR"></td></tr>
+      <tr><td>강도 손실 (d³/D³)</td><td id="sL"></td></tr>
+      <tr><td>판정</td><td id="sJ"></td></tr>
+    </table></div>
+  </div>
+</div>
+<!--@js-->
+let sway=0, t0=0;
+const st=makeCanvas('cv',1.0,draw);
+function calc(){ const D=val('D'), dr=val('d')/100, d=D*dr; const R=D/2, t=(D-d)/2; const tr=t/R; const loss=Math.pow(dr,3)*100;
+  const open=val('open'); const crit = open? 0.4 : 0.3;
+  const risk = tr<crit? 'high' : tr<crit+0.1? 'mid':'low'; return {D,d,R,t,tr,loss,open,crit,risk}; }
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H); const c=calc();
+  // 단면
+  const cx=W*0.3, cy=H*0.42, Rpx=W*0.22*(c.D/150*0.6+0.4);
+  circle(ctx,cx,cy,Rpx,'rgba(176,119,63,.55)',CH.chalk,3);
+  for(let k=1;k<6;k++) circle(ctx,cx,cy,Rpx*k/6,null,'rgba(241,239,230,.12)',1);
+  const rr=Rpx*c.d/c.D;
+  if(rr>0){ circle(ctx,cx,cy,rr,'#1a2a21',CH.orange,2); }
+  if(c.open && rr>0){ ctx.beginPath(); ctx.moveTo(cx+rr*Math.cos(-0.35),cy+rr*Math.sin(-0.35)); ctx.lineTo(cx+Rpx+3,cy-Rpx*0.25); ctx.lineTo(cx+Rpx+3,cy+Rpx*0.25); ctx.lineTo(cx+rr*Math.cos(0.35),cy+rr*Math.sin(0.35)); ctx.closePath(); ctx.fillStyle='#1a2a21'; ctx.fill(); }
+  // t 표시
+  line(ctx,cx-Rpx,cy+Rpx+14,cx-rr,cy+Rpx+14,CH.yellow,2); txt(ctx,'t',(cx-Rpx+cx-rr)/2,cy+Rpx+32,18,CH.yellow,'center',W);
+  line(ctx,cx,cy,cx,cy-Rpx,CH.blue,1.5,[4,3]); txt(ctx,'R',cx+6,cy-Rpx/2,18,CH.blue,'left',W);
+  txt(ctx,'줄기 단면',cx,24,20,CH.chalk,'center',W);
+  // 서 있는 나무 + 바람
+  const bx=W*0.7, by=H*0.92, hgt=H*0.7; const wind=val('wind')/100;
+  const danger = c.risk==='high'? 1 : c.risk==='mid'?0.5:0.15;
+  const bend = wind*0.25*(0.6+danger) + Math.sin(sway)*0.03*wind;
+  const broken = wind>0.7 && c.risk==='high';
+  ctx.strokeStyle=CH.brown; ctx.lineWidth=10; ctx.lineCap='round';
+  if(!broken){ ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx,by-hgt*0.5,bx+hgt*bend,by-hgt); ctx.stroke(); circle(ctx,bx+hgt*bend,by-hgt,W*0.08,'rgba(168,224,160,.45)',CH.chalk,1.5); }
+  else { ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx,by-hgt*0.35); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bx+6,by-hgt*0.35); ctx.lineTo(bx+W*0.2,by-hgt*0.08); ctx.stroke(); circle(ctx,bx+W*0.24,by-hgt*0.1,W*0.06,'rgba(168,224,160,.35)',CH.chalk,1.5); txt(ctx,'부러짐!',bx,by-hgt*0.42,20,CH.pink,'center',W); }
+  ctx.lineCap='butt';
+  for(let i=0;i<Math.round(wind*5);i++){ const y=H*0.2+i*H*0.1; arrow(ctx,W*0.52,y,W*0.52+W*0.07,y,'rgba(158,210,242,.7)',2); }
+  line(ctx,W*0.6,by,W*0.98,by,CH.chalk,2);
+}
+function tick(){ sway+=0.08; draw(); requestAnimationFrame(tick); }
+function update(){
+  const c=calc();
+  setText('vD',c.D+' cm'); setText('vd',val('d')+'% ('+c.d.toFixed(0)+' cm)'); setText('vWd',val('wind')<30?'약함':val('wind')<70?'강함':'태풍급');
+  setText('sT',c.t.toFixed(1)+' cm'); setText('sTR',(c.tr*100).toFixed(0)+'%  (기준 '+Math.round(c.crit*100)+'%)'); setText('sL',c.loss.toFixed(0)+'%');
+  $('sJ').innerHTML = c.risk==='high'?'<span class="hp">위험 — 조치 필요</span>': c.risk==='mid'?'<span class="hl">주의 — 정밀진단·관찰</span>':'<span class="hg">비교적 안전</span>';
+  if(c.risk==='high' && val('wind')>70) msg('잔존벽이 기준보다 얇은 데 강풍까지! 줄기가 부러졌어요','#f29e9e');
+  else if(c.risk==='high') msg(c.open?'개구부가 있으면 비틀림에 약해 기준을 더 엄격하게 봐요':'잔존벽 비율이 30% 미만 → 부러질 위험이 커요','#f29e9e');
+  else if(val('d')>=50 && c.risk==='low') msg(`공동이 지름의 ${val('d')}%나 되는데 강도 손실은 ${c.loss.toFixed(0)}%뿐! 바깥 벽이 힘을 버텨요`,'#a8e0a0');
+  else msg('t/R 비율을 보세요. 공동 크기보다 남은 벽 두께가 중요해요','#f4d35e');
+  draw();
+}
+onInputs(['D','d','open','wind'],update);
+requestAnimationFrame(tick);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">잔존벽 비율 t/R</span>: 건강한 바깥 벽 두께(t) ÷ 줄기 반지름(R). 마텍(Mattheck)의 기준으로 <b>t/R이 약 0.3(30%) 미만이면 부러질 위험이 크다</b>고 봐요.</li>
+  <li><b>개구부</b>(공동이 밖으로 뚫림)가 있으면 단면이 C자가 되어 비틀림·굽힘에 훨씬 약해요 → 더 두꺼운 벽이 필요해요(이 실험에서는 40%로 엄격하게 설정).</li>
+  <li>원형 단면 가정의 강도 손실 = <span class="hl">d³ ÷ D³ × 100(%)</span> (d: 공동 지름, D: 줄기 지름). 공동이 지름의 50%면 손실은 약 12.5%, 70%면 약 34%예요.</li>
+  <li>공동 측정 장비: <b>저항 드릴</b>(미세 드릴의 저항으로 내부 부후 측정), <b>음파 단층촬영</b>(소리 전달 속도로 단면 영상), 생장추. 육안 진단은 <b>VTA(시각적 수목 평가)</b>.</li>
+  <li>위험목 평가는 결함 크기만이 아니라 <b>부러졌을 때 맞을 대상</b>(사람·건물·도로)과 함께 판단해요.</li>
+  <li>조치: 수관 축소(무게·바람 저항 줄이기), 지지대·당김줄(케이블) 설치, 대상물 이동·출입 통제, 심하면 제거. 공동을 무리하게 긁어내면 CODIT 방어벽이 깨지니 주의.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>공동 지름 / 줄기 지름</th><th>t/R</th><th>강도 손실</th></tr>
+<tr><td>50%</td><td>50%</td><td>약 12.5%</td></tr>
+<tr><td>70%</td><td>30%</td><td>약 34%</td></tr>
+<tr><td>80%</td><td>20%</td><td>약 51%</td></tr>
+<tr><td>90%</td><td>10%</td><td>약 73%</td></tr>
+</table></div>
+<!--@quiz-->
+[
+{"q":"줄기 지름 80cm, 공동 지름 56cm인 나무의 잔존벽 비율(t/R)은?","o":["10%","30%","50%","70%"],"a":1,"e":"R = 40cm, t = (80 − 56) ÷ 2 = 12cm → t/R = 12 ÷ 40 = 30%예요."},
+{"q":"공동이 줄기 지름의 50%일 때 강도 손실(d³/D³)은 약?","o":["50%","25%","12.5%","5%"],"a":2,"e":"0.5³ = 0.125 → 약 12.5%예요. 공동이 커 보여도 강도 손실은 생각보다 작아요."},
+{"q":"공동 나무 위험도를 높이는 요인은?","o":["개구부가 있는 공동","두꺼운 잔존벽","작은 수관","약한 바람"],"a":0,"e":"개구부가 있으면 단면이 C자가 되어 비틀림·굽힘에 약해져요."},
+{"q":"줄기 내부 부후를 소리 전달 속도로 영상화하는 장비는?","o":["저항 드릴","음파 단층촬영기","생장추","토양 경도계"],"a":1,"e":"음파 단층촬영은 소리가 썩은 부분에서 느리게 전달되는 원리로 단면을 그려요."}
+]

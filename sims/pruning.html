@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>어디를 자르느냐가 나무의 10년을 정한다 (올바른 가지치기·3단 절단) · 칠판 시뮬레이션</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--board:#24372d;--board2:#1d2e25;--frame:#6b4a2f;--chalk:#f1efe6;--dim:rgba(241,239,230,.6);
+    --yellow:#f4d35e;--pink:#f29e9e;--blue:#9ed2f2;--green:#a8e0a0;--orange:#f0a868}
+  *{box-sizing:border-box}
+  body{margin:0;background:#2b2118;color:var(--chalk);font-family:"Noto Sans KR",sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:14px}
+  .back{display:inline-block;margin:0 0 10px;color:var(--yellow);text-decoration:none;font-size:.95rem}
+  .board{background:radial-gradient(ellipse at 30% 20%,#2c4436 0%,var(--board) 45%,var(--board2) 100%);
+    border:14px solid var(--frame);border-radius:10px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.5);
+    padding:18px 18px 22px;margin-bottom:18px}
+  h1,h2,h3{font-family:"Nanum Pen Script",cursive;font-weight:400;letter-spacing:.5px}
+  h1{font-size:2.5rem;margin:0 0 6px;line-height:1.15}
+  h1 small{display:block;font-size:1.45rem;color:var(--yellow)}
+  h2{font-size:2rem;margin:4px 0 8px;color:var(--yellow)}
+  h3{font-size:1.5rem;margin:4px 0;color:var(--yellow)}
+  p{margin:6px 0}
+  .lead{color:var(--dim);font-size:.95rem}
+  .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .canvasBox{background:rgba(0,0,0,.12);border:1px dashed rgba(241,239,230,.25);border-radius:8px;padding:6px}
+  canvas{display:block;width:100%;touch-action:manipulation}
+  .msg{font-family:"Nanum Pen Script",cursive;font-size:1.55rem;min-height:2.1rem;color:var(--green);text-align:center;line-height:1.25;margin:6px 0}
+  .stat{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:.9rem;color:var(--dim)}
+  .stat b{color:var(--chalk)}
+  button,.tab{font-family:"Noto Sans KR",sans-serif;font-size:.92rem;background:transparent;color:var(--chalk);
+    border:1.5px solid rgba(241,239,230,.6);border-radius:6px;padding:7px 12px;cursor:pointer}
+  button:hover{background:rgba(241,239,230,.1)}
+  button.on,.tab.on{background:var(--chalk);color:var(--board2);font-weight:700}
+  button.primary{border-color:var(--yellow);color:var(--yellow)}
+  .controls,.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .row{margin:10px 0}
+  .row label{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}
+  .row label b{color:var(--yellow);white-space:nowrap}
+  .row input[type=range]{width:100%;accent-color:var(--yellow)}
+  .row .hint{font-size:.8rem;color:var(--dim)}
+  .num{width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid rgba(241,239,230,.4);background:rgba(0,0,0,.2);color:var(--chalk);font-size:1rem}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:8px;border:1px solid rgba(241,239,230,.18);margin:6px 0;cursor:pointer}
+  .check input{margin-top:5px;width:18px;height:18px;accent-color:var(--yellow)}
+  .check .d{font-size:.84rem;color:var(--dim)}
+  .big{font-family:"Nanum Pen Script",cursive;font-size:2.4rem;color:var(--yellow);line-height:1.1}
+  .note{border-left:3px solid var(--yellow);padding:4px 10px;margin:10px 0;font-size:.92rem}
+  .teacher li{margin:6px 0}
+  .hl{color:var(--yellow)} .hp{color:var(--pink)} .hb{color:var(--blue)} .hg{color:var(--green)} .ho{color:var(--orange)}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;margin-top:8px}
+  td,th{border-bottom:1px dashed rgba(241,239,230,.25);padding:6px 4px;text-align:left;vertical-align:top}
+  th{font-family:"Nanum Pen Script",cursive;font-size:1.3rem;font-weight:400;color:var(--yellow)}
+  .tblwrap{overflow-x:auto}
+  .q{border:1px solid rgba(241,239,230,.2);border-radius:8px;padding:10px 12px;margin:10px 0}
+  .q .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .q .opts button.right{background:rgba(168,224,160,.25);border-color:var(--green)}
+  .q .opts button.wrong{background:rgba(242,158,158,.2);border-color:var(--pink)}
+  .q .exp{display:none;font-size:.9rem;margin-top:8px;color:var(--dim)}
+  .q.done .exp{display:block}
+  .foot{font-size:.8rem;color:var(--dim);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← 시뮬레이션 목록</a>
+  <div class="board">
+    <h1>가지 밑동의 '목도리'는 남겨라<small>지륭과 지피융기선 — 올바른 절단 위치와 3단 절단</small></h1>
+    <p class="lead">가지가 줄기에 붙는 자리를 잘 보면, 살짝 불룩한 <b>목도리 같은 부분(지륭, branch collar)</b>과 가지 위쪽 껍질에 주름처럼 솟은 선(<b>지피융기선</b>)이 있어요. 지륭 안에는 썩음을 막는 방어 조직이 모여 있어요. 그래서 지륭 <b>바로 바깥</b>에서 잘라야 상처가 도넛처럼 둥글게 아물어요. 줄기에 바짝 붙여 자르면 방어 조직까지 잘려 나가 줄기 속으로 썩음이 들어가고, 토막을 길게 남기면 그 토막이 죽어 썩는 통로가 돼요.</p>
+  </div>
+  <div class="board">
+    <div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+    <div class="stat"><span>자른 뒤: <b id="sY">0</b>년</span><span>상처 덮임: <b id="sC">-</b></span><span>줄기 속 부후: <b id="sR">-</b></span></div>
+  </div>
+  <div>
+    <h3>① 자를 위치 고르기</h3>
+    <div class="tabs" id="pos"><button data-v="flush">바짝 자르기</button><button class="on" data-v="good">지륭 바깥 (적정)</button><button data-v="stub">토막 남기기</button></div>
+    <div class="controls"><button id="years" class="primary">▶ 5년 지켜보기</button></div>
+    <h3>② 굵은 가지 자르기</h3>
+    <div class="controls"><button id="one">🪚 한 번에 자르기</button><button id="three">1·2·3 3단 절단</button></div>
+    <div class="controls"><button id="reset">↺ 처음부터</button></div>
+  </div>
+</div>
+  </div>
+  <div class="board teacher">
+    <h2>선생님 한마디 — 시험에 나오는 것만</h2>
+    <ol>
+  <li>절단 위치: <span class="hl">지피융기선 바깥쪽 → 지륭 바깥쪽</span>을 잇는 선. 지륭을 다치게 하지도, 토막을 남기지도 않아요.</li>
+  <li><span class="hp">바짝 자르기(flush cut)</span>: 상처가 커지고 지륭의 방어층이 잘려 줄기 속까지 썩어요. <span class="hp">토막 남기기(stub)</span>: 토막이 죽어 부후균의 침입 통로가 되고 유합조직이 덮지 못해요.</li>
+  <li><span class="hl">3단 절단</span>(굵은 가지): ① 줄기에서 30cm쯤 떨어진 곳 아래쪽을 1/3 정도 절단 → ② 그보다 바깥 위쪽에서 잘라 가지 제거 → ③ 남은 토막을 지륭 바깥에서 마무리. 껍질이 찢기는 것을 막아요.</li>
+  <li>시기: 대체로 <b>휴면기(늦겨울~이른 봄)</b>가 좋아요. 단풍나무·자작나무처럼 수액이 많이 흐르는 수종은 잎이 다 자란 뒤에 하기도 해요. 한 번에 수관의 <b>약 25%(1/4)</b> 이상 잘라내지 않아요.</li>
+  <li><b>상처도포제</b>는 부후를 막아 주지 못한다는 연구가 많아 반드시 필요하지는 않아요. 올바른 절단이 가장 좋은 치료예요.</li>
+  <li>두목전정(굵은 줄기를 뭉텅 자르는 것, topping)은 큰 상처·부후·약한 맹아지를 만들어 피해야 해요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>절단</th><th>상처 유합</th><th>줄기 부후</th></tr>
+<tr><td class="hg">지륭 바깥 (적정)</td><td>도넛 모양으로 완전히 덮임</td><td>거의 없음</td></tr>
+<tr><td class="hp">바짝 자르기</td><td>위아래로 길쭉하고 늦음</td><td>줄기 깊이 퍼짐</td></tr>
+<tr><td class="ho">토막 남기기</td><td>덮지 못함</td><td>토막 따라 들어옴</td></tr>
+</table></div>
+  </div>
+  <div class="board">
+    <h2>쪽지시험 4문제</h2>
+    <div id="quiz"></div>
+    <p class="foot">시뮬레이션은 이해를 돕기 위한 단순 모델이에요. 실제 수치는 수종·환경·조건에 따라 달라요.</p>
+  </div>
+</div>
+<script>
+/* ---------- 공통 도우미 ---------- */
+const CH={chalk:'#f1efe6',dim:'rgba(241,239,230,.55)',faint:'rgba(241,239,230,.16)',yellow:'#f4d35e',pink:'#f29e9e',
+  blue:'#9ed2f2',green:'#a8e0a0',orange:'#f0a868',brown:'#b0773f',red:'#e2675c',purple:'#c9a0f0'};
+const $=id=>document.getElementById(id);
+function makeCanvas(id, ratio, draw){
+  const cv=$(id), ctx=cv.getContext('2d'); const st={cv,ctx,W:0,H:0,draw};
+  function rs(){ const d=window.devicePixelRatio||1; const w=Math.max(200,cv.parentElement.clientWidth-12);
+    st.W=w; st.H=Math.round(w*(typeof ratio==='function'?ratio():ratio));
+    cv.width=st.W*d; cv.height=st.H*d; cv.style.height=st.H+'px'; ctx.setTransform(d,0,0,d,0,0); if(st.ready&&st.draw) st.draw(); }
+  window.addEventListener('resize',rs); st.resize=rs; rs(); setTimeout(()=>{ st.ready=true; st.draw&&st.draw(); },0);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(rs);
+  return st;
+}
+function txt(ctx,t,x,y,size,color,align,W){
+  if(W) size=Math.min(size, W/15);
+  ctx.font=size+'px "Nanum Pen Script","Noto Sans KR",cursive'; ctx.fillStyle=color||CH.chalk; ctx.textAlign=align||'center'; ctx.fillText(t,x,y);
+}
+function line(ctx,x1,y1,x2,y2,color,w,dash){ ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle=color||CH.chalk; ctx.lineWidth=w||2; ctx.stroke(); ctx.setLineDash([]); }
+function circle(ctx,x,y,r,fill,stroke,w){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=w||2;ctx.stroke();} }
+function rect(ctx,x,y,w,h,fill,stroke,lw){ if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||2;ctx.strokeRect(x,y,w,h);} }
+function arrow(ctx,x1,y1,x2,y2,color,w){ line(ctx,x1,y1,x2,y2,color,w); const a=Math.atan2(y2-y1,x2-x1),s=7+(w||2)*1.5;
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a-0.45),y2-s*Math.sin(a-0.45)); ctx.lineTo(x2-s*Math.cos(a+0.45),y2-s*Math.sin(a+0.45)); ctx.closePath(); ctx.fillStyle=color||CH.chalk; ctx.fill(); }
+function val(id){ const e=$(id); return e.type==='checkbox'? e.checked : +e.value; }
+function onInputs(ids,fn){ ids.forEach(i=>{ const e=$(i); e.addEventListener('input',fn); e.addEventListener('change',fn); }); fn(); }
+function setText(id,t){ const e=$(id); if(e) e.textContent=t; }
+function msg(t,color){ const e=$('msg'); if(e){ e.textContent=t; e.style.color=color||CH.green; } }
+function segButtons(containerId, onPick){ const c=$(containerId); const bs=[...c.querySelectorAll('button')];
+  bs.forEach(b=>b.addEventListener('click',()=>{ bs.forEach(x=>x.classList.remove('on')); b.classList.add('on'); onPick(b.dataset.v,b); })); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function renderQuiz(QS){ const box=$('quiz');
+  QS.forEach((it,k)=>{ const d=document.createElement('div'); d.className='q';
+    d.innerHTML=`<div><b>Q${k+1}.</b> ${it.q}</div><div class="opts"></div><div class="exp">💡 ${it.e}</div>`;
+    const opts=d.querySelector('.opts');
+    it.o.forEach((t,i)=>{ const b=document.createElement('button'); b.textContent=t; b.onclick=()=>{ if(d.classList.contains('done')) return;
+      d.classList.add('done'); b.classList.add(i===it.a?'right':'wrong'); opts.children[it.a].classList.add('right'); }; opts.appendChild(b); });
+    box.appendChild(d); });
+}
+</script>
+<script>
+let pos='good', year=0, mode='idle', step3=0, timer=null, tear=false;
+const st=makeCanvas('cv',1.0,draw);
+function geo(){ const {W,H}=st; return {tx:W*0.22, tw:W*0.16, by:H*0.42, bh:H*0.12, W,H}; }
+function cutX(g){ const base=g.tx+g.tw/2; return pos==='flush'? base : pos==='good'? base+g.W*0.07 : base+g.W*0.25; }
+function draw(){
+  const {ctx,W,H}=st; const g=geo(); ctx.clearRect(0,0,W,H);
+  // 줄기
+  rect(ctx,g.tx-g.tw/2,0,g.tw,H,'rgba(176,119,63,.45)',CH.chalk,2);
+  const base=g.tx+g.tw/2;
+  const showBranch = mode==='idle' || (mode==='three' && step3<2) || (mode==='one' && !tear);
+  // 지륭 (바짝 자르면 잘려 나감)
+  if(!(mode==='years'&&pos==='flush')){
+  ctx.beginPath(); ctx.moveTo(base,g.by-g.bh*0.85); ctx.quadraticCurveTo(base+W*0.06,g.by-g.bh*0.6,base+W*0.07,g.by-g.bh*0.5); ctx.lineTo(base+W*0.07,g.by+g.bh*0.5); ctx.quadraticCurveTo(base+W*0.06,g.by+g.bh*0.6,base,g.by+g.bh*0.85); ctx.closePath();
+  ctx.fillStyle='rgba(200,150,90,.55)'; ctx.fill(); ctx.strokeStyle=CH.yellow; ctx.lineWidth=2; ctx.stroke();
+  txt(ctx,'지륭',base+W*0.035,g.by+g.bh*0.85+18,16,CH.yellow,'center',W);
+  } else txt(ctx,'지륭까지 잘림',base+6,g.by+g.bh*0.85+18,15,CH.pink,'left',W);
+  // 지피융기선
+  line(ctx,base-2,g.by-g.bh*0.9,base+W*0.05,g.by-g.bh*1.6,CH.green,3); txt(ctx,'지피융기선',base+W*0.06,g.by-g.bh*1.6-4,15,CH.green,'left',W);
+  if(mode==='idle'){
+    rect(ctx,base+W*0.07,g.by-g.bh/2,W*0.66,g.bh,'rgba(176,119,63,.45)',CH.chalk,2);
+    const x=cutX(g); line(ctx,x,g.by-g.bh*1.0,x,g.by+g.bh*1.0,CH.pink,3,[6,4]); txt(ctx,'✂',x,g.by-g.bh*1.05,22,CH.pink,'center',W);
+  }
+  if(mode==='years'){
+    const x=cutX(g);
+    if(pos==='stub'){ rect(ctx,base+W*0.07,g.by-g.bh/2,x-(base+W*0.07),g.bh, year>=2?'rgba(110,80,50,.8)':'rgba(176,119,63,.45)',CH.chalk,2); }
+    // 상처면과 유합조직(도넛)
+    const wx = pos==='stub'? base+W*0.07 : x;
+    const woundR = pos==='flush'? g.bh*0.85 : g.bh*0.5;
+    const close = pos==='good'? Math.min(1,year/4) : pos==='flush'? Math.min(0.55,year/7) : (year<2? year*0.1:0.15);
+    ctx.save(); ctx.translate(W*0.72,H*0.72);
+    circle(ctx,0,0,woundR*1.1,'rgba(176,119,63,.35)',CH.chalk,1.5);
+    circle(ctx,0,0,woundR*(1-close)+0.5,'rgba(110,80,50,.9)');
+    ctx.beginPath(); ctx.arc(0,0,woundR*1.05,0,Math.PI*2); ctx.arc(0,0,Math.max(0.5,woundR*(1-close)),0,Math.PI*2,true); ctx.fillStyle='rgba(168,224,160,.6)'; ctx.fill('evenodd');
+    ctx.restore();
+    txt(ctx,'상처를 정면에서 본 모습',W*0.72,H*0.72+woundR*1.1+20,15,CH.dim,'center',W);
+    // 줄기 속 부후 기둥
+    const rot = pos==='good'? Math.min(0.1,year*0.02) : pos==='flush'? Math.min(1,year*0.22) : Math.min(0.6,Math.max(0,year-1)*0.16);
+    if(rot>0.02){ ctx.beginPath(); ctx.ellipse(g.tx+g.tw*0.15,g.by,g.tw*0.28*Math.min(1,rot*2),H*0.4*rot,0,0,Math.PI*2); ctx.fillStyle='rgba(217,135,74,.75)'; ctx.fill(); }
+    line(ctx,wx,g.by-woundR,wx,g.by+woundR,CH.orange,4);
+  }
+  if(mode==='three'){
+    const L=W*0.66; const x1=base+W*0.32, x2=base+W*0.36;
+    if(step3<2) rect(ctx,base+W*0.07,g.by-g.bh/2,L,g.bh,'rgba(176,119,63,.45)',CH.chalk,2);
+    else { rect(ctx,base+W*0.07,g.by-g.bh/2,x1-(base+W*0.07),g.bh,'rgba(176,119,63,.45)',CH.chalk,2); rect(ctx,x2+10,H*0.8,L*0.5,g.bh,'rgba(176,119,63,.35)',CH.dim,1.5); txt(ctx,'떨어진 가지',x2+10+L*0.25,H*0.8-6,15,CH.dim,'center',W); }
+    if(step3>=1){ line(ctx,x1,g.by+g.bh/2,x1,g.by+g.bh/2-g.bh*0.35,CH.pink,4); txt(ctx,'1',x1,g.by+g.bh/2+20,20,CH.pink,'center',W); }
+    if(step3>=2){ line(ctx,x2,g.by-g.bh/2,x2,g.by+g.bh/2,CH.pink,4); txt(ctx,'2',x2,g.by-g.bh/2-8,20,CH.pink,'center',W); }
+    if(step3>=3){ rect(ctx,base+W*0.07,g.by-g.bh/2,x1-(base+W*0.07)+2,g.bh,'#24372d'); line(ctx,base+W*0.07,g.by-g.bh*0.55,base+W*0.07,g.by+g.bh*0.55,CH.green,4); txt(ctx,'3',base+W*0.07+12,g.by+4,20,CH.green,'left',W); }
+  }
+  if(mode==='one'){
+    rect(ctx,base+W*0.07,g.by-g.bh/2,W*0.1,g.bh,'rgba(176,119,63,.45)',CH.chalk,2);
+    if(tear){ ctx.beginPath(); ctx.moveTo(base+W*0.07,g.by+g.bh/2); ctx.lineTo(base+W*0.04,g.by+g.bh*2.6); ctx.lineTo(base-W*0.02,g.by+g.bh*3.2); ctx.lineTo(base-W*0.01,g.by+g.bh*1.2); ctx.closePath(); ctx.fillStyle='rgba(242,158,158,.55)'; ctx.fill(); txt(ctx,'껍질 찢김!',base+W*0.08,g.by+g.bh*2.6,20,CH.pink,'left',W);
+      rect(ctx,base+W*0.3,H*0.82,W*0.4,g.bh,'rgba(176,119,63,.35)',CH.dim,1.5); }
+  }
+}
+function update(){
+  setText('sY',year);
+  if(mode==='years'){
+    const c = pos==='good'? Math.min(100,Math.round(year/4*100)) : pos==='flush'? Math.round(Math.min(0.55,year/7)*100) : Math.round((year<2?year*0.1:0.15)*100);
+    setText('sC',c+'%'); setText('sR', pos==='good'?'거의 없음': pos==='flush'? (year>=3?'줄기 깊이 퍼짐':'시작'): (year>=3?'토막 따라 줄기로':'토막이 썩는 중'));
+    if(year===0) msg('자르기 완료. 5년 동안 어떻게 되는지 지켜보세요','#f4d35e');
+    else if(pos==='good') msg(year>=4?'상처가 도넛 모양으로 완전히 덮였어요! 지륭의 방어층이 썩음을 막았어요':'유합조직이 둥글게 차오르는 중','#a8e0a0');
+    else if(pos==='flush') msg('상처가 너무 크고 방어 조직(지륭)까지 잘려 줄기 속으로 썩음이 퍼져요','#f29e9e');
+    else msg('남은 토막은 영양을 못 받아 죽고 썩어요. 유합조직이 넘어가 덮지 못해요','#f29e9e');
+  } else if(mode==='three'){
+    const t=['','1단: 줄기에서 30cm쯤 떨어진 곳 아래쪽을 1/3 정도 먼저 잘라요 (껍질 찢김 방지)','2단: 1단보다 조금 바깥 위쪽에서 잘라 가지 무게를 떨어뜨려요','3단: 남은 토막을 지륭 바깥에서 지피융기선 각도에 맞춰 마무리 절단 ✔'];
+    msg(t[step3]||'', step3===3?'#a8e0a0':'#f4d35e');
+  } else if(mode==='one') msg('굵은 가지를 위에서 한 번에 자르면 무게 때문에 꺾이며 줄기 껍질이 찢겨 내려가요','#f29e9e');
+  else msg('분홍 점선이 자를 위치예요. 세 가지를 비교해 보세요','#a8e0a0');
+  draw();
+}
+segButtons('pos',v=>{ pos=v; mode='idle'; year=0; update(); });
+$('years').onclick=()=>{ if(timer) clearInterval(timer); mode='years'; year=0; update(); timer=setInterval(()=>{ year++; update(); if(year>=5){clearInterval(timer);timer=null;} },700); };
+$('one').onclick=()=>{ if(timer){clearInterval(timer);timer=null;} mode='one'; tear=false; update(); setTimeout(()=>{ tear=true; update(); },600); };
+$('three').onclick=()=>{ if(timer) clearInterval(timer); mode='three'; step3=0; update(); timer=setInterval(()=>{ step3++; update(); if(step3>=3){clearInterval(timer);timer=null;} },1300); };
+$('reset').onclick=()=>{ if(timer){clearInterval(timer);timer=null;} mode='idle'; year=0; update(); };
+update();
+</script>
+<script>
+renderQuiz([{"q": "올바른 가지 절단 위치는?", "o": ["줄기에 바짝 붙여서", "지륭 바로 바깥에서", "가지를 30cm 이상 남기고", "지피융기선 안쪽 줄기 쪽으로"], "a": 1, "e": "지륭과 지피융기선을 다치지 않게 지륭 바로 바깥에서 잘라야 방어층이 썩음을 막고 상처가 잘 아물어요."}, {"q": "굵은 가지를 3단 절단하는 가장 큰 이유는?", "o": ["작업 시간을 줄이려고", "가지 무게로 줄기 껍질이 찢기는 것을 막으려고", "도포제를 바르기 쉽게", "잎을 많이 남기려고"], "a": 1, "e": "먼저 아래쪽을 잘라 두면 가지가 떨어질 때 껍질이 찢겨 내려가지 않아요."}, {"q": "바짝 자르기(flush cut)의 결과로 옳은 것은?", "o": ["상처가 작아진다", "지륭의 방어층이 잘려 줄기 내부 부후가 커진다", "유합이 더 빨라진다", "맹아지가 생기지 않는다"], "a": 1, "e": "방어 조직이 있는 지륭까지 잘라 CODIT 방어벽 형성이 약해지고 부후가 줄기 안으로 퍼져요."}, {"q": "한 번에 제거하는 가지 양의 일반적인 상한은?", "o": ["수관의 약 1/4", "수관의 1/2", "수관의 3/4", "제한 없음"], "a": 0, "e": "한 번에 수관의 약 25% 이상 제거하지 않는 것이 원칙이에요."}]);
+</script>
+</body>
+</html>

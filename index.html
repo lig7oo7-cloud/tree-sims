@@ -32,7 +32,7 @@
   <div class="board">
     <h1>칠판 시뮬레이션 모음<small>눌러 보고, 움직여 보고, 외우기</small></h1>
     <div class="tabs" id="tabs"></div>
-    <input type="search" id="q" placeholder="검색 (예: 상처, 증산, 농약)">
+    <input type="search" id="q" placeholder="검색 (예: 상처, 증산, 농약, 재선충)">
     <div class="count" id="count"></div>
     <div id="list"></div>
   </div>
@@ -42,14 +42,16 @@
   const listEl=document.getElementById('list'), tabsEl=document.getElementById('tabs'), q=document.getElementById('q'), countEl=document.getElementById('count');
   let items=[], subj='전체';
   try{ items = await fetch('list.json?'+Date.now()).then(r=>r.json()); }catch(e){ listEl.innerHTML='<p class="empty">목록을 불러오지 못했어요.</p>'; return; }
-  items.sort((a,b)=> (b.added||'').localeCompare(a.added||''));
-  const subjects=['전체',...new Set(items.map(i=>i.subject))];
+  
+  const cat=i=>(i.unit||'').split(' · ')[0]||i.subject;
+  const ORDER=['수목생리학','토양학','수목병리학','수목해충학','수목관리'];
+  const subjects=['전체',...[...new Set(items.map(cat))].sort((x,y)=>(ORDER.indexOf(x)+99)%99-(ORDER.indexOf(y)+99)%99)];
   subjects.forEach(s=>{ const b=document.createElement('button'); b.className='tab'+(s===subj?' on':''); b.textContent=s;
     b.onclick=()=>{ subj=s; [...tabsEl.children].forEach(x=>x.classList.toggle('on',x.textContent===s)); render(); }; tabsEl.appendChild(b); });
   const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   function render(){
     const k=q.value.trim();
-    const shown=items.filter(i=>(subj==='전체'||i.subject===subj) && (!k || [i.title,i.unit,i.summary].join(' ').includes(k)));
+    const shown=items.filter(i=>(subj==='전체'||cat(i)===subj) && (!k || [i.title,i.unit,i.summary].join(' ').includes(k)));
     countEl.textContent=`${shown.length}개`;
     listEl.innerHTML = shown.length? shown.map(i=>`<a class="card" href="${esc(i.file)}"><div class="t">${esc(i.title)}</div><div class="m">${esc(i.subject)} · ${esc(i.unit)} · ${esc(i.added)}</div><div class="s">${esc(i.summary)}</div></a>`).join('') : '<p class="empty">해당하는 시뮬레이션이 없어요.</p>';
   }

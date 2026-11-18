@@ -1,0 +1,87 @@
+<!--meta
+{"id":"pesticide-dilution","title":"1000배 희석이면 20L에 몇 mL? (농약 희석배수와 ppm)","subject":"나무의사","unit":"수목관리 · 농약","summary":"물량·희석배수·유효성분을 넣으면 넣을 약량과 ppm이 바로 계산되고, 배수를 착각했을 때 약해 위험을 보는 계산 실험","added":"2026-11-19","headline":"희석배수는 '물 몇 배에 약 1'","sub":"약량 = 물량 ÷ 배수 — 단위만 맞추면 끝"}
+-->
+<!--@intro-->
+<p class="lead">"1000배 희석"은 약 1에 물을 1000만큼 넣는다는 뜻이에요(정확히는 완성된 액이 약의 1000배). 그래서 물 <b>20L = 20,000mL</b>에 1000배라면, 약은 20,000 ÷ 1000 = <b>20mL</b>(가루약이면 20g)예요. 계산은 이게 전부인데, 현장에서는 L와 mL를 헷갈리거나 100배와 1000배를 착각해서 사고가 나요.</p>
+<!--@sim-->
+<div class="grid">
+  <div>
+    <div class="canvasBox"><canvas id="cv"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div>
+    <div class="row"><label>물량 <b id="vW"></b></label><input type="range" id="w" min="1" max="500" value="20"></div>
+    <div class="controls"><button data-w="20">🎒 배부식 20L</button><button data-w="100">🛢 100L</button><button data-w="500">🚜 동력 탱크 500L</button></div>
+    <div class="row"><label>희석배수 <b id="vX"></b></label><input type="range" id="x" min="0" max="9" value="3"></div>
+    <div class="tabs" id="form"><button class="on" data-v="mL">액상 (mL)</button><button data-v="g">가루·입상 (g)</button></div>
+    <div class="row"><label>제품의 유효성분 함량 <b id="vA"></b></label><input type="range" id="ai" min="1" max="80" value="20"></div>
+    <label class="check"><input type="checkbox" id="oops"><div><b class="hp">실수 모드: 배수를 한 자리 잘못 읽음</b><div class="d">1000배를 100배로 착각했다면?</div></div></label>
+    <div class="big" id="dose"></div>
+    <div class="tblwrap"><table id="tbl"></table></div>
+  </div>
+</div>
+<!--@js-->
+const LIST=[250,500,800,1000,1500,2000,2500,3000,4000,5000];
+let form='mL';
+const st=makeCanvas('cv',0.95,draw);
+function calc(){ const W=val('w'), X=LIST[val('x')], a=val('ai'); const used = val('oops')? X/10 : X;
+  const dose = W*1000/used; const ppm = a*10000/used; const right = W*1000/X; return {W,X,a,used,dose,ppm,right,ppmRight:a*10000/X}; }
+function draw(){
+  const {ctx,W,H}=st; ctx.clearRect(0,0,W,H); const c=calc();
+  // 탱크
+  const tx=W*0.08, tw=W*0.42, ty=H*0.12, th=H*0.72;
+  rect(ctx,tx,ty,tw,th,null,CH.chalk,2.5);
+  const fill=Math.min(1,c.W/500);
+  const tint = c.used<c.X? 'rgba(242,158,158,.55)':'rgba(158,210,242,.45)';
+  rect(ctx,tx+2,ty+th*(1-fill),tw-4,th*fill-2,tint);
+  txt(ctx,'물 '+c.W+' L',tx+tw/2,ty+th*(1-fill)-6,20,CH.blue,'center',W);
+  txt(ctx,'= '+(c.W*1000).toLocaleString()+' mL',tx+tw/2,ty+th+22,16,CH.dim,'center',W);
+  // 계량컵
+  const cx=W*0.72, cw=W*0.18, cy=H*0.22, chh=H*0.5;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+cw*0.12,cy+chh); ctx.lineTo(cx+cw*0.88,cy+chh); ctx.lineTo(cx+cw,cy); ctx.strokeStyle=CH.chalk; ctx.lineWidth=2; ctx.stroke();
+  const maxCup = Math.max(100, Math.pow(10,Math.ceil(Math.log10(c.dose*1.05))));
+  const f = Math.min(1,c.dose/maxCup);
+  ctx.beginPath(); const y=cy+chh*(1-f); ctx.moveTo(cx+cw*0.12*(1-f)+cw*0.0, y); ctx.lineTo(cx+cw*0.12,cy+chh); ctx.lineTo(cx+cw*0.88,cy+chh); ctx.lineTo(cx+cw-cw*0.12*(1-f),y); ctx.closePath(); ctx.fillStyle= c.used<c.X? CH.red : CH.yellow; ctx.globalAlpha=.75; ctx.fill(); ctx.globalAlpha=1;
+  for(let k=1;k<=4;k++){ const yy=cy+chh*(1-k/4); line(ctx,cx+cw*0.85,yy,cx+cw,yy,CH.dim,1); txt(ctx,(maxCup*k/4)+'',cx+cw+4,yy+4,12,CH.dim,'left'); }
+  txt(ctx,'약 '+(c.dose<10?c.dose.toFixed(1):Math.round(c.dose))+' '+form,cx+cw/2,cy+chh+24,20,c.used<c.X?CH.pink:CH.yellow,'center',W);
+  arrow(ctx,cx-6,cy+chh*0.6,tx+tw+8,ty+th*0.5,CH.dim,1.5);
+  txt(ctx,c.X.toLocaleString()+'배',W*0.62,ty+th*0.5-8,18,CH.chalk,'center',W);
+}
+function update(){
+  const c=calc();
+  setText('vW',c.W+' L'); setText('vX',c.X.toLocaleString()+'배'); setText('vA',c.a+'%');
+  setText('dose','넣을 약: '+(c.dose<10?c.dose.toFixed(1):Math.round(c.dose).toLocaleString())+' '+form);
+  $('tbl').innerHTML=`<tr><td>계산식</td><td>${(c.W*1000).toLocaleString()} mL ÷ ${c.used.toLocaleString()}배</td></tr>
+   <tr><td>살포액 유효성분 농도</td><td>${c.a}% × 10,000 ÷ ${c.used.toLocaleString()} = <b>${c.ppm.toFixed(0)} ppm</b></td></tr>
+   ${val('oops')?`<tr><td class="hp">올바른 양</td><td class="hp">${c.right<10?c.right.toFixed(1):Math.round(c.right)} ${form} (${c.ppmRight.toFixed(0)} ppm)</td></tr>`:''}`;
+  if(val('oops')) msg(`배수를 한 자리 틀리면 약이 10배! (${Math.round(c.dose)} ${form}) → 약해·잔류 위험`,'#f29e9e');
+  else if(c.W>=100) msg('큰 탱크는 먼저 약을 소량의 물에 풀어(예비 희석) 넣고 잘 저어요','#f4d35e');
+  else msg(`물 ${c.W}L(=${(c.W*1000).toLocaleString()}mL) ÷ ${c.X.toLocaleString()}배 = ${c.dose<10?c.dose.toFixed(1):Math.round(c.dose)}${form}`,'#a8e0a0');
+  draw();
+}
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{ $('w').value=b.dataset.w; update(); });
+segButtons('form',v=>{ form=v; update(); });
+onInputs(['w','x','ai','oops'],update);
+<!--@teacher-->
+<ol>
+  <li><span class="hl">약량 = 물량 ÷ 희석배수</span>. 단위를 맞추는 게 핵심: <b>1L = 1,000mL</b>. 액상은 mL, 가루(수화제·입상수화제)는 g으로 계산해요.</li>
+  <li>예: 20L에 1000배 → 20,000mL ÷ 1000 = <b>20mL</b>. 500L에 2000배 → 500,000 ÷ 2000 = <b>250mL</b>.</li>
+  <li><span class="hl">ppm(살포액의 유효성분 농도)</span> = 유효성분(%) × 10,000 ÷ 희석배수. 예: 20% 제품 1000배 → 200ppm. 1% = 10,000ppm이에요.</li>
+  <li>원하는 ppm으로 배수를 정할 때: <b>희석배수 = 유효성분(%) × 10,000 ÷ 목표 ppm</b>.</li>
+  <li>여러 약을 섞을 때(혼용)도 <b>각각의 희석배수대로</b> 물량 기준으로 따로 계산해서 넣어요. 혼용 가능 여부는 혼용가부표·라벨을 확인하고, 섞을 때는 약을 하나씩 충분히 풀어 넣어요.</li>
+  <li>배수를 한 자리 착각하면 10배 농도 → <span class="hp">약해(잎 탐·낙엽)</span>, 천적 피해, 잔류 문제. 계량은 반드시 계량컵·저울로 해요.</li>
+</ol>
+<div class="tblwrap"><table>
+<tr><th>물량</th><th>500배</th><th>1000배</th><th>2000배</th></tr>
+<tr><td>20 L</td><td>40</td><td>20</td><td>10</td></tr>
+<tr><td>100 L</td><td>200</td><td>100</td><td>50</td></tr>
+<tr><td>500 L</td><td>1,000</td><td>500</td><td>250</td></tr>
+</table></div>
+<p class="lead">표의 숫자 단위: mL(액상) 또는 g(가루)</p>
+<!--@quiz-->
+[
+{"q":"물 20L에 1,000배액을 만들 때 필요한 약량은?","o":["2mL","20mL","200mL","2,000mL"],"a":1,"e":"20,000mL ÷ 1,000 = 20mL예요."},
+{"q":"유효성분 50% 수화제를 1,000배로 희석한 살포액의 농도는?","o":["50ppm","500ppm","5,000ppm","5ppm"],"a":1,"e":"50 × 10,000 ÷ 1,000 = 500ppm이에요."},
+{"q":"500L 탱크에 2,000배액을 만들 때 필요한 약량은?","o":["25mL","250mL","2,500mL","4mL"],"a":1,"e":"500,000mL ÷ 2,000 = 250mL예요."},
+{"q":"유효성분 10% 제품으로 100ppm 살포액을 만들려면 몇 배로 희석하나?","o":["100배","500배","1,000배","10,000배"],"a":2,"e":"희석배수 = 10 × 10,000 ÷ 100 = 1,000배예요."}
+]
