@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>칠판 시뮬레이션 · 나무의 상처 가두기 (CODIT)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board:#24372d; --board2:#1d2e25; --frame:#6b4a2f; --chalk:#f1efe6;
+    --dim:rgba(241,239,230,.55); --yellow:#f4d35e; --pink:#f29e9e; --blue:#9ed2f2; --green:#a8e0a0;
+    --decay:#d9874a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#2b2118;color:var(--chalk);font-family:"Noto Sans KR",sans-serif;line-height:1.6}
+  .wrap{max-width:1000px;margin:0 auto;padding:14px}
+  .board{background:radial-gradient(ellipse at 30% 20%,#2c4436 0%,var(--board) 45%,var(--board2) 100%);
+    border:14px solid var(--frame);border-radius:10px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.5);
+    padding:18px 18px 24px;margin-bottom:18px}
+  h1,h2,.chalk{font-family:"Nanum Pen Script",cursive;font-weight:400;letter-spacing:.5px}
+  h1{font-size:2.6rem;margin:0 0 4px;line-height:1.1}
+  h1 small{display:block;font-size:1.5rem;color:var(--yellow)}
+  h2{font-size:2rem;margin:6px 0 8px;color:var(--yellow)}
+  p{margin:6px 0}
+  .lead{color:var(--dim);font-size:.95rem}
+  .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .canvasBox{position:relative;background:rgba(0,0,0,.12);border:1px dashed rgba(241,239,230,.25);border-radius:8px;padding:6px}
+  canvas{display:block;width:100%;touch-action:manipulation;cursor:crosshair}
+  .stat{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:.9rem;margin-top:6px;color:var(--dim)}
+  .stat b{color:var(--chalk)}
+  .msg{font-family:"Nanum Pen Script",cursive;font-size:1.6rem;min-height:2.1rem;color:var(--green);text-align:center}
+  .tabs{display:flex;gap:6px;margin-bottom:8px}
+  button,.tab{font-family:"Noto Sans KR",sans-serif;font-size:.92rem;background:transparent;color:var(--chalk);
+    border:1.5px solid rgba(241,239,230,.6);border-radius:6px;padding:7px 12px;cursor:pointer}
+  button:hover,.tab:hover{background:rgba(241,239,230,.1)}
+  .tab.on{background:var(--chalk);color:var(--board2);font-weight:700}
+  button.primary{border-color:var(--yellow);color:var(--yellow)}
+  .controls{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .walls{display:grid;gap:6px;margin:10px 0}
+  .wall{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;border:1px solid rgba(241,239,230,.18);cursor:pointer;user-select:none}
+  .wall input{margin-top:5px;width:18px;height:18px;accent-color:var(--yellow)}
+  .wall .t{font-weight:700}
+  .wall .d{font-size:.85rem;color:var(--dim)}
+  .wall.off{opacity:.55}
+  .tag{display:inline-block;font-size:.75rem;padding:0 7px;border-radius:10px;margin-left:4px;border:1px solid currentColor}
+  .slider{margin:10px 0 2px}
+  .slider input{width:100%;accent-color:var(--yellow)}
+  .note{border-left:3px solid var(--yellow);padding:4px 10px;margin:10px 0;font-size:.92rem}
+  .teacher{font-size:1.02rem}
+  .teacher li{margin:6px 0}
+  .hl{color:var(--yellow)} .hp{color:var(--pink)} .hb{color:var(--blue)} .hg{color:var(--green)}
+  .q{border:1px solid rgba(241,239,230,.2);border-radius:8px;padding:10px 12px;margin:10px 0}
+  .q .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .q .opts button.right{background:rgba(168,224,160,.25);border-color:var(--green)}
+  .q .opts button.wrong{background:rgba(242,158,158,.2);border-color:var(--pink)}
+  .q .exp{display:none;font-size:.9rem;margin-top:8px;color:var(--dim)}
+  .q.done .exp{display:block}
+  table{border-collapse:collapse;width:100%;font-size:.9rem}
+  td,th{border-bottom:1px dashed rgba(241,239,230,.25);padding:6px 4px;text-align:left;vertical-align:top}
+  th{font-family:"Nanum Pen Script",cursive;font-size:1.3rem;font-weight:400;color:var(--yellow)}
+  .foot{font-size:.8rem;color:var(--dim);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="../" style="display:inline-block;margin:0 0 10px;color:#f4d35e;text-decoration:none;font-size:.95rem">← 시뮬레이션 목록</a>
+
+  <div class="board">
+    <h1>나무는 상처를 "치료"하지 않는다<small>대신 "가둔다" — CODIT 칠판 실험</small></h1>
+    <p class="lead">사람은 상처가 나면 세포가 새로 자라 원래대로 돌아가요. 나무는 못 해요. 한 번 다친 목재는 평생 그대로예요. 그래서 나무는 썩은 부분 주변에 <b>벽 4개</b>를 쳐서 "여기서 더 못 넘어와!" 하고 가둬요. 이걸 <b>CODIT</b>(Compartmentalization Of Decay In Trees, 수목 부후의 구획화)이라 하고, 알렉스 샤이고(Alex Shigo)가 정리한 이론이에요.</p>
+  </div>
+
+  <div class="board">
+    <div class="grid">
+      <div>
+        <div class="tabs">
+          <button class="tab on" data-view="cross">✂ 가로로 자른 면 (횡단면)</button>
+          <button class="tab" data-view="side">↕ 세로로 자른 면 (종단면)</button>
+        </div>
+        <div class="canvasBox"><canvas id="cv"></canvas></div>
+        <div class="msg" id="msg">칠판의 나무 껍질 쪽을 눌러 상처를 내 보세요</div>
+        <div class="controls">
+          <button class="primary" id="btnWound">🪓 상처 내기</button>
+          <button id="btnPlay">⏸ 멈춤</button>
+          <button id="btnReset">↺ 처음부터</button>
+        </div>
+        <div class="stat">
+          <span>썩은 부분: <b id="sDecay">0%</b></span>
+          <span>상처 뒤 자란 나이테: <b id="sRings">0</b>개</span>
+          <span>경과: <b id="sTime">0</b>달</span>
+        </div>
+      </div>
+
+      <div>
+        <h2>벽 켜고 끄기</h2>
+        <p class="lead" style="margin-top:0">벽을 하나씩 꺼 보고 다시 상처를 내 보세요. 어떤 벽이 없을 때 제일 크게 썩는지 보면 외워져요.</p>
+        <div class="walls">
+          <label class="wall" data-w="1"><input type="checkbox" checked data-w="1"><div><div class="t"><span class="hp">벽 1</span> 위·아래 막기 <span class="tag hp">가장 약함</span></div><div class="d">물관(도관)을 전충체(타일로스)·검 같은 물질로 막아요. 원래 물이 다니던 길이라 막기 어려워서 썩음은 위아래로 길게 퍼져요. ↕ 세로 면에서 보여요.</div></div></label>
+          <label class="wall" data-w="2"><input type="checkbox" checked data-w="2"><div><div class="t"><span class="hb">벽 2</span> 안쪽(중심) 막기</div><div class="d">나이테 끝부분의 촘촘한 늦재(추재) 세포가 안쪽으로 파고드는 걸 막아요.</div></div></label>
+          <label class="wall" data-w="3"><input type="checkbox" checked data-w="3"><div><div class="t"><span class="hg">벽 3</span> 옆으로 막기</div><div class="d">바큇살처럼 뻗은 방사조직이 옆(둘레 방향)으로 번지는 걸 막아요.</div></div></label>
+          <label class="wall" data-w="4"><input type="checkbox" checked data-w="4"><div><div class="t"><span class="hl">벽 4</span> 방어대(barrier zone) <span class="tag hl">가장 강함</span></div><div class="d">상처가 난 뒤 형성층이 새로 만든 벽. 이 벽 바깥의 새 나이테는 절대 안 썩어요. 그래서 속이 텅 빈 나무도 살아 있어요.</div></div></label>
+        </div>
+        <div class="slider">
+          <div>나무 기운(수세): <b id="vigLabel">건강함</b></div>
+          <input type="range" id="vig" min="0" max="100" value="80">
+          <div class="lead" style="font-size:.82rem">기운이 약한 나무는 벽을 튼튼하게 못 쌓아요. 낮추고 상처를 내 보세요.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="board teacher">
+    <h2>선생님 한마디 — 시험에 나오는 것만</h2>
+    <ol>
+      <li><span class="hl">벽 강도 순서</span>: 벽1 &lt; 벽2 &lt; 벽3 &lt; 벽4. "1이 제일 약하고 4가 제일 세다" 숫자 순서 그대로예요.</li>
+      <li><span class="hp">벽 1~3은 상처 나기 전부터 있던 조직</span>이 반응해서 만든 것(반응대, reaction zone). <span class="hl">벽 4만 상처 뒤에 형성층이 새로 만든 것</span>(방어대, barrier zone).</li>
+      <li>썩음은 <span class="hp">세로(위아래)로 가장 길게</span> 퍼져요. 그래서 줄기를 잘라 보면 썩은 부분이 기둥 모양이에요.</li>
+      <li>CODIT는 "썩음을 막는" 게 아니라 "<b>썩음이 퍼지는 범위를 가두는</b>" 것. 이미 썩은 건 그대로 남아요.</li>
+      <li>나무의사 현장 적용: 가지를 자를 때 <span class="hl">지륭(가지 밑 볼록한 목깃)</span>과 <span class="hl">지피융기선</span>을 남기고 잘라야 해요. 줄기에 바짝 붙여 자르면(바짝자르기) 방어벽을 만드는 조직까지 다쳐서 줄기 속까지 썩어요.</li>
+      <li>속이 썩은 구멍을 무리하게 긁어내면 벽까지 깨져서 오히려 썩음이 더 퍼질 수 있어요. 벽을 깨지 않는 게 원칙이에요.</li>
+    </ol>
+    <table>
+      <tr><th>벽</th><th>막는 방향</th><th>무엇이 막나</th><th>강도</th></tr>
+      <tr><td class="hp">벽 1</td><td>위·아래 (축 방향)</td><td>물관 막힘 (전충체·검)</td><td>가장 약함</td></tr>
+      <tr><td class="hb">벽 2</td><td>안쪽 (중심 방향)</td><td>나이테 늦재 세포</td><td>약함</td></tr>
+      <tr><td class="hg">벽 3</td><td>옆 (접선 방향)</td><td>방사조직</td><td>강함</td></tr>
+      <tr><td class="hl">벽 4</td><td>바깥 (새 나이테 쪽)</td><td>형성층이 만든 방어대</td><td>가장 강함</td></tr>
+    </table>
+  </div>
+
+  <div class="board">
+    <h2>쪽지시험 4문제</h2>
+    <div id="quiz"></div>
+    <p class="foot">시뮬레이션의 퍼지는 속도는 이해를 돕기 위한 단순 모델이에요. 실제 속도는 수종·균·환경에 따라 달라요.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const msgEl = document.getElementById('msg');
+  const vigEl = document.getElementById('vig');
+  const vigLabel = document.getElementById('vigLabel');
+  const sDecay = document.getElementById('sDecay'), sRings = document.getElementById('sRings'), sTime = document.getElementById('sTime');
+  const C = {chalk:'#f1efe6', dim:'rgba(241,239,230,.35)', faint:'rgba(241,239,230,.14)', yellow:'#f4d35e', pink:'#f29e9e', decay:'rgba(217,135,74,.85)', decay2:'rgba(140,80,40,.9)', wound:'#f29e9e'};
+
+  let view = 'cross';
+  let walls = {1:true,2:true,3:true,4:true};
+  let playing = true;
+  let W=0,H=0,dpr=1;
+
+  // ---------- model ----------
+  const A = 56;              // sectors (cross)
+  const R0 = 12, RMAX = 19;  // rings at start / max
+  const SH = 44;             // side view rows (height)
+  let S;                     // state
+
+  function reset(){
+    S = {
+      rings: R0, woundRings: null, // rings count at time of wound
+      cross: [], side: [], wounded:false, steps:0, grown:0, still:0, done:false
+    };
+    S.cw=[]; S.sw=[];
+    for(let i=0;i<RMAX;i++){ S.cross.push(new Int32Array(A)); S.cw.push(new Uint8Array(A)); }
+    for(let r=0;r<SH;r++){ S.side.push(new Int32Array(RMAX)); S.sw.push(new Uint8Array(RMAX)); }
+    setMsg('칠판의 나무 껍질 쪽을 눌러 상처를 내 보세요', '#a8e0a0');
+    updateStats(); draw();
+  }
+
+  function vig(){ return 0.25 + 0.75*(vigEl.value/100); }
+  const BASE = 0.45, LIFE = 3, WOUND_OPEN = 36;
+  const STR = {1:0.65, 2:0.88, 3:0.94};   // 벽1 < 벽2 < 벽3 (벽4는 완전 차단)
+  function p(w){ return walls[w] ? BASE*(1 - STR[w]*vig()) : BASE; }
+  function pNew(){ return walls[4] ? 0 : 0.7; }
+  // 균의 '전선'은 잠깐만 활발하고(LIFE), 상처 구멍은 아물 때까지(WOUND_OPEN) 계속 균이 들어옴
+  function active(v, isW){ return v>0 && (S.steps - v <= LIFE || (isW && S.steps < WOUND_OPEN)); }
+
+  function wound(sector, row){
+    if(S.wounded) reset();
+    S.wounded = true; S.woundRings = S.rings;
+    const outer = S.rings-1;
+    // cross: wound at given sector, outer 3 rings, 4 sectors wide
+    const sc = (sector==null)? Math.floor(A*0.75) : sector;
+    for(let d=-2; d<=1; d++){ const j=(sc+d+A)%A; for(let i=outer; i>outer-3; i--){ S.cross[i][j]=1; S.cw[i][j]=1; } }
+    S.crossWound = sc;
+    // side: wound mid-height (or row), outer 3 cols
+    const rc = (row==null)? Math.floor(SH/2) : Math.max(3,Math.min(SH-4,row));
+    for(let r=rc-2;r<=rc+2;r++) for(let i=outer;i>outer-3;i--){ S.side[r][i]=1; S.sw[r][i]=1; }
+    S.sideWound = rc;
+    setMsg('균이 들어왔어요! 나무가 벽을 쌓는 중…', '#f29e9e');
+  }
+
+  function step(){
+    if(!S.wounded || S.done) return;
+    S.steps++;
+    let changed = 0;
+    // cross-section spread
+    const nc = S.cross.map(a=>a.slice());
+    for(let i=0;i<S.rings;i++) for(let j=0;j<A;j++){
+      if(!active(S.cross[i][j], S.cw[i][j])) continue;
+      const B = S.steps+1;
+      // inward
+      if(i>0 && !nc[i-1][j] && Math.random()<p(2)){ nc[i-1][j]=B; changed++; }
+      // outward (old wood vs new wood)
+      if(i+1<S.rings && !nc[i+1][j]){
+        const pr = (i+1 >= S.woundRings) ? pNew() : p(2)*0.8;
+        if(Math.random()<pr){ nc[i+1][j]=B; changed++; }
+      }
+      // tangential
+      for(const d of [-1,1]){ const jj=(j+d+A)%A; if(!nc[i][jj] && Math.random()<p(3)){ nc[i][jj]=B; changed++; } }
+    }
+    S.cross = nc;
+    // side spread
+    const ns = S.side.map(a=>a.slice());
+    for(let r=0;r<SH;r++) for(let i=0;i<S.rings;i++){
+      if(!active(S.side[r][i], S.sw[r][i])) continue;
+      const B = S.steps+1;
+      for(const d of [-1,1]){ const rr=r+d; if(rr>=0&&rr<SH&&!ns[rr][i]&&Math.random()<p(1)){ ns[rr][i]=B; changed++; } }
+      if(i>0 && !ns[r][i-1] && Math.random()<p(2)){ ns[r][i-1]=B; changed++; }
+      if(i+1<S.rings && !ns[r][i+1]){
+        const pr = (i+1 >= S.woundRings) ? pNew() : p(2)*0.8;
+        if(Math.random()<pr){ ns[r][i+1]=B; changed++; }
+      }
+    }
+    S.side = ns;
+    // growth: one new ring every 14 steps
+    if(S.steps % 14 === 0 && S.rings < RMAX){ S.rings++; S.grown++; }
+    S.still = changed ? 0 : S.still+1;
+    if(S.still > 20 && S.steps > WOUND_OPEN && S.rings>=RMAX){ S.done = true; finish(); }
+    updateStats();
+  }
+
+  function decayPct(){
+    let tot=0, d=0;
+    if(view==='cross'){ for(let i=0;i<S.rings;i++){ const area = (2*i+1); for(let j=0;j<A;j++){ tot+=area; if(S.cross[i][j]) d+=area; } } }
+    else { for(let r=0;r<SH;r++) for(let i=0;i<S.rings;i++){ tot++; if(S.side[r][i]) d++; } }
+    return tot? Math.round(100*d/tot):0;
+  }
+  function newWoodDecayed(){
+    if(!S.wounded) return false;
+    for(let i=S.woundRings;i<S.rings;i++){ for(let j=0;j<A;j++) if(S.cross[i][j]) return true; }
+    return false;
+  }
+  function finish(){
+    const pct = decayPct();
+    const off = [1,2,3,4].filter(w=>!walls[w]);
+    if(newWoodDecayed()) setMsg(`벽 4가 없어서 새 나이테까지 썩었어요 (${pct}%) — 나무 전체가 위험!`, '#f29e9e');
+    else if(off.length===0 && pct<12) setMsg(`구획화 성공! 썩음이 ${pct}%에 갇혔어요 🎉`, '#a8e0a0');
+    else if(off.length===0) setMsg(`벽은 다 있지만 기운이 약해 ${pct}%까지 퍼졌어요`, '#f4d35e');
+    else setMsg(`벽 ${off.join('·')} 없이 ${pct}% 썩었어요. 벽을 켜고 비교해 보세요`, '#f4d35e');
+  }
+  function updateStats(){
+    sDecay.textContent = (S && S.wounded ? decayPct() : 0) + '%';
+    sRings.textContent = S ? S.grown : 0;
+    sTime.textContent = S ? Math.round(S.steps/1.2) : 0;
+  }
+  function setMsg(t,c){ msgEl.textContent=t; msgEl.style.color=c||'#a8e0a0'; }
+
+  // ---------- drawing ----------
+  function resize(){
+    dpr = window.devicePixelRatio||1;
+    const w = cv.parentElement.clientWidth - 12;
+    W = w; H = view==='cross' ? w : Math.round(w*1.1);
+    cv.width = W*dpr; cv.height = H*dpr; cv.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  function chalkText(t,x,y,size,color,align){
+    size = Math.min(size, W/15); ctx.font = `${size}px "Nanum Pen Script", cursive`;
+    ctx.fillStyle = color; ctx.textAlign = align||'center'; ctx.fillText(t,x,y);
+  }
+
+  function drawCross(){
+    const cx=W/2, cy=H/2+8, Rpx = W*0.40;
+    const dr = Rpx/RMAX;
+    // bark
+    ctx.lineWidth=3; ctx.strokeStyle=C.chalk;
+    ctx.beginPath(); ctx.arc(cx,cy,S.rings*dr+4,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([2,4]); ctx.lineWidth=1; ctx.strokeStyle=C.dim;
+    ctx.beginPath(); ctx.arc(cx,cy,S.rings*dr+9,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    // decay cells
+    for(let i=0;i<S.rings;i++) for(let j=0;j<A;j++){
+      const v=S.cross[i][j]; if(!v) continue;
+      const a0 = j/A*Math.PI*2, a1=(j+1)/A*Math.PI*2;
+      ctx.beginPath(); ctx.arc(cx,cy,(i+1)*dr,a0,a1); ctx.arc(cx,cy,i*dr,a1,a0,true); ctx.closePath();
+      ctx.fillStyle = S.cw[i][j] ? C.decay2 : C.decay; ctx.fill();
+    }
+    // rays (wall 3)
+    ctx.strokeStyle = walls[3] ? 'rgba(168,224,160,.35)' : C.faint; ctx.lineWidth=1;
+    for(let j=0;j<A;j+=2){ const a=j/A*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*dr, cy+Math.sin(a)*dr); ctx.lineTo(cx+Math.cos(a)*S.rings*dr, cy+Math.sin(a)*S.rings*dr); ctx.stroke(); }
+    // rings (wall 2)
+    for(let i=1;i<=S.rings;i++){
+      ctx.beginPath(); ctx.arc(cx,cy,i*dr,0,Math.PI*2);
+      ctx.strokeStyle = walls[2] ? 'rgba(158,210,242,.55)' : C.dim; ctx.lineWidth = walls[2]?1.4:1; ctx.stroke();
+    }
+    // barrier zone (wall 4)
+    if(S.wounded && walls[4]){
+      ctx.beginPath(); ctx.arc(cx,cy,S.woundRings*dr,0,Math.PI*2);
+      ctx.strokeStyle=C.yellow; ctx.lineWidth=3.5; ctx.setLineDash([10,5]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // pith
+    ctx.fillStyle=C.chalk; ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fill();
+    // wound marker
+    if(S.wounded){
+      const a=(S.crossWound+0.5)/A*Math.PI*2, r=S.woundRings*dr+16;
+      chalkText('상처', cx+Math.cos(a)*(r+14), cy+Math.sin(a)*(r+14)+6, 22, C.pink);
+    }
+    // labels
+    chalkText('가로로 자른 나무', W/2, 26, 24, C.chalk);
+    chalkText('파란 원=나이테(벽2) · 초록 선=방사조직(벽3)', W/2, H-28, 15, C.dim);
+    if(S.wounded && walls[4]) chalkText('노란 점선 = 벽4 방어대', W/2, H-8, 18, C.yellow);
+    else chalkText('껍질 근처를 눌러 상처 내기', W/2, H-8, 18, C.dim);
+  }
+
+  function drawSide(){
+    const top=46, bottom=H-46, left=W*0.18, right=W*0.82;
+    const colW = (right-left)/(2*RMAX);
+    const rowH = (bottom-top)/SH;
+    const mid = (left+right)/2; // pith line
+    // draw both halves mirrored: right half shows real data, left mirrors (only wounded on right)
+    // stems outlines
+    ctx.strokeStyle=C.chalk; ctx.lineWidth=3;
+    const xr = mid + S.rings*colW, xl = mid - S.rings*colW;
+    ctx.beginPath(); ctx.moveTo(xl,top); ctx.lineTo(xl,bottom); ctx.moveTo(xr,top); ctx.lineTo(xr,bottom); ctx.stroke();
+    // ring lines
+    for(let i=1;i<S.rings;i++){
+      ctx.strokeStyle = walls[2] ? 'rgba(158,210,242,.45)' : C.faint; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(mid+i*colW,top); ctx.lineTo(mid+i*colW,bottom); ctx.moveTo(mid-i*colW,top); ctx.lineTo(mid-i*colW,bottom); ctx.stroke();
+    }
+    // pith
+    ctx.setLineDash([4,6]); ctx.strokeStyle=C.dim; ctx.beginPath(); ctx.moveTo(mid,top); ctx.lineTo(mid,bottom); ctx.stroke(); ctx.setLineDash([]);
+    // decay
+    for(let r=0;r<SH;r++) for(let i=0;i<S.rings;i++){
+      const v=S.side[r][i]; if(!v) continue;
+      ctx.fillStyle = S.sw[r][i]? C.decay2 : C.decay;
+      ctx.fillRect(mid+i*colW, top+r*rowH, colW+0.5, rowH+0.5);
+    }
+    // wall 1 plugs: little horizontal ticks at decay column ends
+    if(S.wounded && walls[1]){
+      ctx.strokeStyle=C.pink; ctx.lineWidth=2;
+      for(let i=0;i<S.rings;i++){
+        let minR=-1,maxR=-1; for(let r=0;r<SH;r++) if(S.side[r][i]){ if(minR<0)minR=r; maxR=r; }
+        if(minR<0) continue;
+        ctx.beginPath();
+        if(minR>0){ ctx.moveTo(mid+i*colW+1, top+minR*rowH-1); ctx.lineTo(mid+(i+1)*colW-1, top+minR*rowH-1); }
+        if(maxR<SH-1){ ctx.moveTo(mid+i*colW+1, top+(maxR+1)*rowH+1); ctx.lineTo(mid+(i+1)*colW-1, top+(maxR+1)*rowH+1); }
+        ctx.stroke();
+      }
+    }
+    // barrier zone
+    if(S.wounded && walls[4]){
+      ctx.strokeStyle=C.yellow; ctx.lineWidth=3.5; ctx.setLineDash([10,5]);
+      ctx.beginPath(); ctx.moveTo(mid+S.woundRings*colW,top); ctx.lineTo(mid+S.woundRings*colW,bottom); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if(S.wounded) chalkText('←상처', xr+4, top+S.sideWound*rowH+8, 22, C.pink, 'left');
+    chalkText('세로로 자른 나무', W/2, 26, 24, C.chalk);
+    chalkText('↑위', left-22, top+14, 20, C.dim); chalkText('↓아래', left-22, bottom, 20, C.dim);
+    chalkText('속(중심)', mid, bottom+22, 18, C.dim);
+    chalkText(walls[1] ? '분홍 선 = 벽1이 물관을 막은 곳' : '벽1 꺼짐: 위아래로 쭉쭉 퍼져요', W/2, H-6, 18, walls[1]?C.pink:C.dim);
+  }
+
+  function draw(){
+    if(!S) return;
+    ctx.clearRect(0,0,W,H);
+    view==='cross' ? drawCross() : drawSide();
+  }
+
+  // ---------- input ----------
+  cv.addEventListener('click', e=>{
+    const rect = cv.getBoundingClientRect();
+    const x = e.clientX-rect.left, y = e.clientY-rect.top;
+    if(view==='cross'){
+      const cx=W/2, cy=H/2+8; const a = Math.atan2(y-cy,x-cx); let j = Math.floor(((a+Math.PI*2)%(Math.PI*2))/(Math.PI*2)*A);
+      wound(j, null);
+    } else {
+      const top=46,bottom=H-46; const row=Math.floor((y-top)/((bottom-top)/SH)); wound(null,row);
+    }
+    draw();
+  });
+  document.getElementById('btnWound').onclick = ()=>{ wound(null,null); draw(); };
+  document.getElementById('btnReset').onclick = ()=>{ reset(); };
+  const btnPlay = document.getElementById('btnPlay');
+  btnPlay.onclick = ()=>{ playing=!playing; btnPlay.textContent = playing?'⏸ 멈춤':'▶ 재생'; };
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+    view=t.dataset.view; resize(); updateStats(); if(S.done) finish();
+  });
+  document.querySelectorAll('.wall input').forEach(inp=>inp.onchange=()=>{
+    walls[inp.dataset.w]=inp.checked; inp.closest('.wall').classList.toggle('off',!inp.checked); draw();
+  });
+  function setVig(){ const v=+vigEl.value; vigLabel.textContent = v>70?'건강함':v>40?'보통':v>15?'약함':'아주 약함'; }
+  vigEl.oninput=setVig; setVig();
+  window.addEventListener('resize', resize);
+
+  reset(); resize();
+  setInterval(()=>{ if(playing){ step(); draw(); } }, 110);
+
+  // ---------- quiz ----------
+  const QS = [
+    {q:'CODIT 모델에서 가장 강한 벽은?', o:['벽 1','벽 2','벽 3','벽 4'], a:3, e:'벽 4(방어대, barrier zone). 상처 뒤 형성층이 새로 만든 벽으로, 그 바깥의 새 목재로 썩음이 못 넘어가요.'},
+    {q:'썩음이 가장 쉽게, 가장 길게 퍼지는 방향은?', o:['위·아래(축 방향)','안쪽(중심 방향)','옆(접선 방향)','바깥(새 나이테)'], a:0, e:'벽 1이 가장 약해서 축 방향으로 길게 퍼져요. 물관은 원래 물이 다니는 길이라 막기 어렵기 때문이에요.'},
+    {q:'벽 3을 이루는 조직은?', o:['늦재(추재) 세포','방사조직','형성층','전충체'], a:1, e:'방사조직이 옆(접선) 방향 확산을 막아요. 늦재는 벽 2, 형성층은 벽 4를 만들고, 전충체는 벽 1에서 물관을 막아요.'},
+    {q:'가지치기로 상처를 가장 작게 가두는 방법은?', o:['줄기에 바짝 붙여 자른다','지륭(목깃)을 남기고 그 바깥에서 자른다','가지를 길게 남겨 둔다','자른 면을 깊게 파낸다'], a:1, e:'지륭과 지피융기선을 남기고 잘라야 나무가 방어벽을 잘 만들어요. 바짝자르기는 줄기 조직을 다치게 하고, 너무 길게 남기면 남은 토막이 썩어요.'}
+  ];
+  const qbox = document.getElementById('quiz');
+  QS.forEach((it,k)=>{
+    const d=document.createElement('div'); d.className='q';
+    d.innerHTML=`<div><b>Q${k+1}.</b> ${it.q}</div><div class="opts"></div><div class="exp">💡 ${it.e}</div>`;
+    const opts=d.querySelector('.opts');
+    it.o.forEach((t,i)=>{ const b=document.createElement('button'); b.textContent=t; b.onclick=()=>{
+      if(d.classList.contains('done')) return;
+      d.classList.add('done'); b.classList.add(i===it.a?'right':'wrong'); opts.children[it.a].classList.add('right');
+    }; opts.appendChild(b); });
+    qbox.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>

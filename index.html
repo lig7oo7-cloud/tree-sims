@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>칠판 시뮬레이션 모음 · 나무의사 · 식물보호기사</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--board:#24372d;--board2:#1d2e25;--frame:#6b4a2f;--chalk:#f1efe6;--dim:rgba(241,239,230,.6);--yellow:#f4d35e}
+  *{box-sizing:border-box}
+  body{margin:0;background:#2b2118;color:var(--chalk);font-family:"Noto Sans KR",sans-serif;line-height:1.55}
+  .wrap{max-width:900px;margin:0 auto;padding:14px}
+  .board{background:radial-gradient(ellipse at 30% 20%,#2c4436 0%,var(--board) 45%,var(--board2) 100%);
+    border:14px solid var(--frame);border-radius:10px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.5);padding:18px}
+  h1{font-family:"Nanum Pen Script",cursive;font-weight:400;font-size:2.6rem;margin:0;line-height:1.1}
+  h1 small{display:block;font-size:1.4rem;color:var(--yellow)}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 10px}
+  .tab{font-family:inherit;font-size:.92rem;background:transparent;color:var(--chalk);border:1.5px solid rgba(241,239,230,.6);border-radius:6px;padding:6px 12px;cursor:pointer}
+  .tab.on{background:var(--chalk);color:var(--board2);font-weight:700}
+  input[type=search]{width:100%;padding:9px 12px;border-radius:6px;border:1.5px solid rgba(241,239,230,.4);background:rgba(0,0,0,.2);color:var(--chalk);font-size:.95rem;margin-bottom:12px}
+  .card{display:block;text-decoration:none;color:inherit;border:1px dashed rgba(241,239,230,.3);border-radius:8px;padding:12px 14px;margin:10px 0}
+  .card:hover{background:rgba(241,239,230,.06);border-color:var(--yellow)}
+  .card .t{font-family:"Nanum Pen Script",cursive;font-size:1.7rem;line-height:1.2;color:var(--yellow)}
+  .card .m{font-size:.8rem;color:var(--dim)}
+  .card .s{font-size:.92rem;margin-top:3px}
+  .empty,.count{color:var(--dim);font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="board">
+    <h1>칠판 시뮬레이션 모음<small>눌러 보고, 움직여 보고, 외우기</small></h1>
+    <div class="tabs" id="tabs"></div>
+    <input type="search" id="q" placeholder="검색 (예: 상처, 증산, 농약)">
+    <div class="count" id="count"></div>
+    <div id="list"></div>
+  </div>
+</div>
+<script>
+(async function(){
+  const listEl=document.getElementById('list'), tabsEl=document.getElementById('tabs'), q=document.getElementById('q'), countEl=document.getElementById('count');
+  let items=[], subj='전체';
+  try{ items = await fetch('list.json?'+Date.now()).then(r=>r.json()); }catch(e){ listEl.innerHTML='<p class="empty">목록을 불러오지 못했어요.</p>'; return; }
+  items.sort((a,b)=> (b.added||'').localeCompare(a.added||''));
+  const subjects=['전체',...new Set(items.map(i=>i.subject))];
+  subjects.forEach(s=>{ const b=document.createElement('button'); b.className='tab'+(s===subj?' on':''); b.textContent=s;
+    b.onclick=()=>{ subj=s; [...tabsEl.children].forEach(x=>x.classList.toggle('on',x.textContent===s)); render(); }; tabsEl.appendChild(b); });
+  const esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function render(){
+    const k=q.value.trim();
+    const shown=items.filter(i=>(subj==='전체'||i.subject===subj) && (!k || [i.title,i.unit,i.summary].join(' ').includes(k)));
+    countEl.textContent=`${shown.length}개`;
+    listEl.innerHTML = shown.length? shown.map(i=>`<a class="card" href="${esc(i.file)}"><div class="t">${esc(i.title)}</div><div class="m">${esc(i.subject)} · ${esc(i.unit)} · ${esc(i.added)}</div><div class="s">${esc(i.summary)}</div></a>`).join('') : '<p class="empty">해당하는 시뮬레이션이 없어요.</p>';
+  }
+  q.oninput=render; render();
+})();
+</script>
+</body>
+</html>
